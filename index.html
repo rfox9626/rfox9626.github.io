@@ -11,6 +11,8 @@
         section { margin-top: 40px; }
         .skills { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
         @media (max-width: 600px) { .skills { grid-template-columns: 1fr; } }
+        /* Link styling to ensure it's visible */
+        .project-link { font-weight: bold; font-size: 1.1em; color: #0066cc; }
         a { color: #0066cc; text-decoration: none; }
         a:hover { text-decoration: underline; }
     </style>
@@ -31,8 +33,8 @@
     <section>
         <h2>Technical Foundation</h2>
         <div class="skills">
-            <div><strong>Backend & Data:</strong> Python, PostgreSQL, SQL Procedures, Bash Scripting</div>
-            <div><strong>Infrastructure:</strong> AWS, Terraform (IaC), Docker, Monitoring</div>
+            <div><strong>Systems & Backend:</strong> C, Golang, Python, PostgreSQL, Redis, SQL Procedures, Bash Scripting</div>
+            <div><strong>Infrastructure & AI:</strong> AI-Assisted Development, AWS, Terraform (IaC), Docker, Monitoring</div>
             <div><strong>Leadership:</strong> Architectural Strategy, Mentorship, Agile</div>
         </div>
     </section>
@@ -40,9 +42,9 @@
     <section>
         <h2>Selected Case Studies</h2>
         
-        <h3><a href="design.html">1. High-Concurrency E-Commerce Engine</a></h3>
+        <h3>1. High-Concurrency E-Commerce Engine</h3>
         <p>
-            <em><a href="design.html">View Technical Design & Architecture</a></em>
+            <a href="design.html" class="project-link">→ View Technical Design & Architecture</a>
         </p>
         <p>[Paste your Challenge/Solution/Outcome text here]</p>
         
