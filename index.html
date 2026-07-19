@@ -2,28 +2,53 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Richard Fox | Portfolio</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Richard Fox | Software Engineer</title>
     <style>
-        body { font-family: sans-serif; max-width: 800px; margin: 40px auto; padding: 0 20px; color: #333; }
-        .case-study { margin-top: 40px; border-top: 1px solid #ccc; padding-top: 20px; }
-        .case-study a { color: #007bff; text-decoration: none; font-weight: bold; }
-        .case-study a:hover { text-decoration: underline; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; line-height: 1.6; color: #333; max-width: 800px; margin: 40px auto; padding: 0 20px; }
+        header { border-bottom: 2px solid #eee; padding-bottom: 20px; }
+        h1 { margin: 0; }
+        section { margin-top: 40px; }
+        .skills { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        @media (max-width: 600px) { .skills { grid-template-columns: 1fr; } }
+        a { color: #0066cc; text-decoration: none; }
+        a:hover { text-decoration: underline; }
     </style>
 </head>
 <body>
 
-    <h1>Portfolio</h1>
+    <header>
+        <h1>Richard Fox</h1>
+        <p>Senior Software Engineer | Backend & Systems Architecture</p>
+        <p><a href="mailto:rfox9626@gmail.com">rfox9626@gmail.com</a> | <a href="https://linkedin.com/in/richard-fox-06839b13b/">LinkedIn</a></p>
+    </header>
 
-    <div class="case-study">
-        <h3>High-Concurrency E-Commerce Engine</h3>
+    <section>
+        <h2>About</h2>
+        <p>[Paste your "Professional Narrative" here]</p>
+    </section>
+
+    <section>
+        <h2>Technical Foundation</h2>
+        <div class="skills">
+            <div><strong>Backend & Data:</strong> Python, PostgreSQL, SQL Procedures, Bash Scripting</div>
+            <div><strong>Infrastructure:</strong> AWS, Terraform (IaC), Docker, Monitoring</div>
+            <div><strong>Leadership:</strong> Architectural Strategy, Mentorship, Agile</div>
+        </div>
+    </section>
+
+    <section>
+        <h2>Selected Case Studies</h2>
         
+        <h3><a href="design.html">1. High-Concurrency E-Commerce Engine</a></h3>
         <p>
-            <a href="design.html">View Technical Design & Architecture</a>
+            <em><a href="design.html">View Technical Design & Architecture</a></em>
         </p>
+        <p>[Paste your Challenge/Solution/Outcome text here]</p>
         
-        <p><strong>Challenge:</strong> Describe your traffic spikes and latency issues here.</p>
-        <p><strong>Solution:</strong> Describe how the event-driven architecture solved it.</p>
-    </div>
+        <h3>2. Cloud-Native Infrastructure (AWS/Terraform)</h3>
+        <p>[Paste your Challenge/Solution/Outcome text here]</p>
+    </section>
 
 </body>
 </html>
