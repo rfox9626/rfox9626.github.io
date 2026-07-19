@@ -6,21 +6,20 @@
     <style>
         body { font-family: sans-serif; max-width: 800px; margin: 40px auto; padding: 0 20px; color: #333; }
         .case-study { margin-top: 40px; border-top: 1px solid #ccc; padding-top: 20px; }
-        img { width: 100%; max-width: 800px; height: auto; border: 1px solid #ddd; }
+        /* Make the link pop a bit more */
+        .case-study a { color: #007bff; text-decoration: none; font-weight: bold; }
+        .case-study a:hover { text-decoration: underline; }
     </style>
 </head>
 <body>
 
     <div class="case-study">
         <h3>High-Concurrency E-Commerce Engine</h3>
-        <ul>
-          <li>
-            <strong>High-Concurrency E-Commerce Engine</strong> 
-            <br>
+        
+        <p>
             <a href="design.html">View Technical Design & Architecture</a>
-        </li>
-        </ul>  
-       
+        </p>
+        
         <p><strong>Challenge:</strong> Describe your traffic spikes and latency issues here.</p>
         <p><strong>Solution:</strong> Describe how the event-driven architecture solved it.</p>
     </div>
