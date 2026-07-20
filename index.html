@@ -1,4 +1,64 @@
-<section>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Richard Fox | Software Engineer</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; line-height: 1.6; color: #333; max-width: 800px; margin: 40px auto; padding: 0 20px; }
+        header { border-bottom: 2px solid #eee; padding-bottom: 20px; }
+        h1 { margin: 0; }
+        section { margin-top: 40px; }
+        .skills { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        @media (max-width: 600px) { .skills { grid-template-columns: 1fr; } }
+        .project-link { font-weight: bold; font-size: 1.1em; color: #0066cc; }
+        a { color: #0066cc; text-decoration: none; }
+        a:hover { text-decoration: underline; }
+        ul { padding-left: 20px; }
+        li { margin-bottom: 10px; }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>Richard Fox</h1>
+        <p>Senior Software Engineer | Backend & Systems Architecture</p>
+        <p><a href="mailto:rfox9626@gmail.com">rfox9626@gmail.com</a> | <a href="https://linkedin.com/in/richard-fox-06839b13b/">LinkedIn</a></p>
+    </header>
+
+    <section>
+        <h2>About</h2>
+        <p>I am a systems-focused backend architect with a Master’s degree in Computer Science and decades of experience building high-throughput, low-latency distributed infrastructure. My expertise lies at the intersection of robust systems engineering—designing multi-process Linux daemons, custom replication engines, and high-concurrency event pipelines—and pragmatic cloud architecture. I specialize in untangling legacy bottlenecks, optimizing data concurrency, and migrating critical systems to modern, cloud-native frameworks like Go and AWS.</p>
+        <p>I treat modern AI development tools as an engineering force multiplier. By leveraging LLMs to rapidly navigate complex codebases and streamline boilerplate architecture under strict manual verification guardrails, I significantly accelerate delivery speed while maintaining absolute execution safety. I thrive on small, fast-moving teams where deep technical credibility, hands-on implementation, and active mentorship drive measurable business outcomes.</p>
+    </section>
+
+    <section>
+        <h2>Technical Foundation</h2>
+        <div class="skills">
+            <div><strong>Systems & Backend:</strong> C, Golang, Ruby on Rails, Python, PostgreSQL, Redis, SQL Procedures, Bash Scripting</div>
+            <div><strong>Infrastructure & AI:</strong> AI-Assisted Development, AWS, Terraform (IaC), Docker, Monitoring</div>
+            <div><strong>Leadership:</strong> Architectural Strategy, Mentorship, Agile</div>
+        </div>
+    </section>
+
+    <section>
+        <h2>AI-Driven Development & Acceleration</h2>
+        <p>Leveraging generative AI and LLMs as a force multiplier to accelerate system comprehension, eliminate boilerplate friction, and augment deep diagnostic troubleshooting—while maintaining rigorous manual verification guardrails.</p>
+        <ul>
+            <li><strong>Legacy Codebase Navigation:</strong> Utilizing AI models to rapidly parse and trace deep execution call hierarchies and data flow paths across massive, unfamiliar C and Go repositories, significantly reducing engineering onboarding latency.</li>
+            <li><strong>Automated Testing & Boilerplate Scaffolding:</strong> Bootstrapping extensive unit and integration test fixtures, baseline Terraform infrastructure-as-code configuration maps, and repetitive backend scaffolding to optimize baseline coverage and skip routine setup tasks.</li>
+            <li><strong>Advanced System Debugging & Core Dump Analysis:</strong> Deploying AI to identify patterns in dense diagnostic logs, stack anomalies, and memory outputs during complex debugging sequences where traditional tools like <code>gdb</code> yield limited stack context.</li>
+            <li><strong>Rigorous Quality Control & Guardrails:</strong> Maintaining absolute domain oversight. Recognizing that models can generate syntactically plausible but contextually flawed architecture, every AI output undergoes strict manual verification, deep code review, and sandboxed testing before production integration.</li>
+        </ul>
+    </section>
+
+    <section>
+        <h2>Portfolio</h2>
+        <h3><a href="design.html" class="project-link">High-Concurrency E-Commerce Engine & Fulfillment Pipeline</a></h3>
+        <p>Architected an event-driven e-commerce distributed system handling inventory race conditions, decoupled payment processing, and atomic order ledger transactions. <a href="design.html">→ View Technical Design & Architecture</a></p>
+    </section>
+
+    <section>
         <h2>Selected Case Studies</h2>
         
         <h3>1. E911 SMPP Stateful Routing Engine &amp; Session Proxy (C &amp; Network Primitives)</h3>
@@ -41,3 +101,6 @@
         <p>Engineered a programmatic asset management API utilizing the AWS SDK to handle cloud object storage lifecycles and secure temporary media purging. While initial requirements proposed deploying an ephemeral AWS Lambda function triggered via Kafka queues to process file deletions, I proactively redesigned the system into a dedicated Python service. This architectural pivot eliminated serverless cold-start latencies, bypassed strict Lambda execution timeouts when handling bulk asset sweeps, and drastically reduced costs by maintaining long-lived, optimized connection pools directly to the storage layers.</p>
         <p>The resulting microservice leverages token-based authentication and non-blocking asynchronous routines to efficiently track, validate, and execute automated cleanup operations on massive media storage volumes without impacting upstream business logic.</p>
     </section>
+
+</body>
+</html>
