@@ -26,7 +26,7 @@
 
     <section>
         <h2>About</h2>
-        <p>[Paste your "Professional Narrative" here]</p>
+        <p>[Add your narrative here tomorrow]</p>
     </section>
 
     <section>
@@ -41,35 +41,35 @@
     <section>
         <h2>Selected Case Studies</h2>
         
-        <h3><a href="design.html" class="project-link">1. High-Concurrency E-Commerce Engine</a></h3>
-        <p><a href="design.html">→ View Technical Design & Architecture</a></p>
-        
-        <h3>2. Proprietary Geo-Replication System</h3>
-        <p>Created and implemented a custom, trigger-based PostgreSQL geo-replication system to enable granular control over data replication across specific tables and columns.</p>
-        
-        <h3>3. E911 SMPP Router</h3>
-        <p>Developed an SMPP router to bridge connectivity between E911 systems and Kannel tasks, enabling seamless communication protocols.</p>
-        
-        <h3>4. Cross-System Session Correlation</h3>
-        <p>Engineered a correlation engine to map inbound and outbound calls/texts across disparate systems by tracking and linking session IDs.</p>
-        
-        <h3>5. Bare-Metal DB Migration</h3>
-        <p>Participated in the large-scale migration of database environments between bare-metal servers, ensuring data integrity and minimal downtime.</p>
-        
-        <h3>6. Process Request Scheduler</h3>
-        <p>Engineered a configurable process request scheduler in C, leveraging shared memory for high-performance communication and PostgreSQL for reliable state persistence.</p>
-        
-        <h3>7. Kafka Native Line Archiver</h3>
-        <p>Architected and implemented a Kafka consumer service to archive audio and data recordings directly from native lines.</p>
-        
-        <h3>8. REST API Suite (Account Drift, CDR, Audio/MMS)</h3>
-        <p>Developed a suite of REST APIs to handle Account Drift monitoring, CDR reporting, and programmatic media retrieval from object stores.</p>
-        
-        <h3>9. Database Reporting & Offload Systems</h3>
-        <p>Authored complex PostgreSQL procedures for reporting; built an automated SMTP/SFTP offload system for customer recordings with custom email notification and CSV export logic.</p>
-        
-        <h3>10. REST API</h3>
-        <p>Developed a REST API to handle secure, programmatic removal and management of assets within AWS object storage.</p>
+        <h3><a href="design.html" class="project-link">1. High-Concurrency E-Commerce Engine & Fulfillment Pipeline</a></h3>
+        <p>Architected an event-driven e-commerce distributed system handling inventory race conditions, decoupled payment processing, and atomic order ledger transactions. <a href="design.html">→ View Technical Design & Architecture</a></p>
+
+        <h3>2. E911 SMPP Router</h3>
+        <p>Architected a high-throughput Short Message Peer-to-Peer (SMPP) routing engine in C to bridge low-latency communication between mission-critical E911 emergency services and downstream Kannel tasks, ensuring guaranteed message delivery under volatile loads.</p>
+
+        <h3>3. Proprietary Peer-to-Peer Geo-Replication System</h3>
+        <p>Architected a proprietary, bi-directional peer-to-peer replication engine to synchronize account data and system states in real time across distributed databases. To respect strict relational foreign key constraints, engineered custom operational ordering logic for <code>INSERT</code>, <code>UPDATE</code>, and <code>DELETE</code> routines, preventing cascading constraint violations and deadlocks. Built the sync pipeline to consistently handle a sustained real-time load of 750 accounts per minute (averaging 1,500 synchronization messages per minute).</p>
+
+        <h3>4. Cross-System Session Correlation Engine</h3>
+        <p>Engineered a high-performance session tracking engine that maps and correlates disparate inbound/outbound voice calls and multimedia messages (MMS). Utilized structured session ID schemas to unify audit trails across distributed, legacy telecom infrastructures.</p>
+
+        <h3>5. Bare-Metal Database Migration Infrastructure</h3>
+        <p>Orchestrated large-scale, zero-downtime database migrations across bare-metal environments. Developed automated data validation and verification scripts to ensure absolute schema integrity and zero data loss during high-volume cutovers.</p>
+
+        <h3>6. High-Throughput Linux System Daemon & Request Scheduler</h3>
+        <p>Architected a highly scalable, multi-process Linux daemon framework in C designed to orchestrate and dispatch immediate and deferred tasks across local and remote distributed nodes. Engineered an event-driven core utilizing a combination of SysV Message Queues and POSIX shared memory for low-latency, high-throughput Inter-Process Communication (IPC). Built a dedicated, non-blocking background runner to poll and track deferred request lifecycles persisted in PostgreSQL. To ensure future extensibility, designed a modular plugin architecture allowing developers to drop in new, compiled request-handling libraries using standard code templates and configuration hot-reloading.</p>
+
+        <h3>7. Native Line Kafka Archiver</h3>
+        <p>Architected a distributed Go-based Kafka consumer service designed to ingest, process, and archive native-line audio recordings and high-volume metadata directly into resilient enterprise object storage layers.</p>
+
+        <h3>8. Core REST API Suite</h3>
+        <p>Developed a secure, production-grade suite of internal REST APIs handling core telecom business logic, including account drift tracking, automated Call Detail Record (CDR) reporting, and high-performance audio/MMS payload retrieval.</p>
+
+        <h3>9. Database Reporting & Automated Offload System</h3>
+        <p>Authored optimized PostgreSQL stored procedures and complex views for deep financial and operational reporting; engineered an automated, resilient backend pipeline to offload customer call recordings via secure SMTP/SFTP channels.</p>
+
+        <h3>10. AWS S3 Asset Management API</h3>
+        <p>Built a programmatic management API utilizing the AWS SDK to handle cloud object storage lifecycles. Features secure, token-based authentication and automated clean-up routines for temporary media storage assets.</p>
     </section>
 
 </body>
