@@ -89,8 +89,9 @@
         <h3>9. Database Reporting & Automated Offload System</h3>
         <p>Authored optimized PostgreSQL stored procedures and complex views for deep financial and operational reporting; engineered an automated, resilient backend pipeline to offload customer call recordings via secure SMTP/SFTP channels.</p>
 
-        <h3>10. AWS S3 Asset Management API</h3>
-        <p>Built a programmatic management API utilizing the AWS SDK to handle cloud object storage lifecycles. Features secure, token-based authentication and automated clean-up routines for temporary media storage assets.</p>
+        <h3>10. AWS S3 Asset Lifecycle API &amp; Microservice Redesign (Python &amp; AWS SDK)</h3>
+        <p>Engineered a programmatic asset management API utilizing the AWS SDK to orchestrate complex cloud object storage lifecycles and secure temporary media purging. While initial requirements proposed deploying an ephemeral AWS Lambda function triggered via Kafka queues to process file deletions, I proactively redesigned the system into a dedicated Python service. This architectural pivot eliminated serverless cold-start latencies, bypassed strict Lambda execution timeouts when handling bulk asset sweeps, and drastically reduced costs by maintaining long-lived, optimized connection pools directly to the storage layers.</p>
+        <p>The resulting microservice leverages token-based authentication and non-blocking asynchronous routines to efficiently track, validate, and execute automated cleanup operations on massive media storage volumes without impacting upstream business logic.</p>
     </section>
 
 </body>
