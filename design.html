@@ -48,15 +48,41 @@
 <pre><code>{
   "transaction_id": "tx-8b6f4e1a-c5d9-4b23-a12f-f67c34e59012",
   "user_id": "user-789",
-  "action": "checkout_success",
+  "action": "checkout",
   "ip_address": "192.168.2.123",
   "status": "success",
   "timestamp": "1753110000"
 }</code></pre>
+
+        <h2>3. Execution Scenarios</h2>
+        
+        <h3>Success Scenario</h3>
+        <p><strong>Input:</strong></p>
+<pre><code>{
+  "transaction_id": "tx-5a1e2b3c-4d5e-6f7a-8b9c-0d1e2f3a4b5c",
+  "user_id": "user-789",
+  "action": "checkout",
+  "ip_address": "192.168.2.123",
+  "status": "success",
+  "timestamp": "1753110000"
+}</code></pre>
+        <p><strong>Result:</strong> Payload successfully validated by edge nodes, buffered into the ingestion queue, and safely persisted to the datastore layer with a decoupled asynchronous worker acknowledgment.</p>
+
+        <h3>Restricted User (Early Termination)</h3>
+        <p><strong>Input:</strong></p>
+<pre><code>{
+  "transaction_id": "tx-00000000-0000-0000-0000-000000000000",
+  "user_id": "user-789",
+  "action": "checkout",
+  "ip_address": "192.168.2.123",
+  "status": "fail",
+  "timestamp": "1753110000"
+}</code></pre>
+        <p><strong>Result:</strong> <code>HTTP 403 Forbidden</code> thrown instantly at the API gateway layer via middleware validation filters. The system terminates the request immediately and never touches backend queues or database connection pools, successfully protecting core infrastructure throughput.</p>
     </section>
 
     <section>
-        <h2>3. Technical Topology &amp; Decoupled Flow</h2>
+        <h2>4. Technical Topology &amp; Decoupled Flow</h2>
         
         <div class="grid">
             <div>
@@ -78,7 +104,7 @@
     </section>
 
     <section>
-        <h2>4. Failure Recovery &amp; Safe Auditing Paths</h2>
+        <h2>5. Failure Recovery &amp; Safe Auditing Paths</h2>
         <p>If downstream processors encounter system constraints or validation failures, the state record is automatically enriched with error flags and directed to a secondary Dead Letter Queue (DLQ). A continuous audit pipeline verifies the integrity of every message token against historic log checksums to ensure that zero customer records are corrupted or dropped during infrastructure migrations.</p>
     </section>
 
