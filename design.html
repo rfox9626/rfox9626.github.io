@@ -24,7 +24,7 @@
     <a href="index.html" class="back-link">&larr; Back to Portfolio</a>
 
     <h1>Technical Design: High-Concurrency Order Engine</h1>
-    <p><strong>Author:</strong> Richard Fox | <strong>Status:</strong> Production Design</p>
+    <p><strong>Author:</strong> Richard Fox | <strong>Status:</strong> Production Design & Implementation</p>
 
     <section>
         <h2>1. Architectural Overview</h2>
@@ -113,6 +113,37 @@
         <h3>Restricted User (Early Termination)</h3>
         <p><strong>Input:</strong> <code>{"user_id": "BANNED_USER", "item_id": "456"}</code></p>
         <p><strong>Result:</strong> HTTP 403 Forbidden. The system never touches SQS/DynamoDB, protecting system throughput.</p>
+    </section>
+
+    <section>
+        <h2>6. Infrastructure Evolution & Project Structure</h2>
+        <p>The project layout separates independent microservices from the centralized Terraform infrastructure configuration, managed via GitHub Actions automation.</p>
+        
+        <h3>6.1 Project Tree Layout</h3>
+        <pre><code>ecommerce-security-pipeline/
+├── .github/
+│   └── workflows/
+│       └── deploy.yml
+├── services/
+│   ├── ingress-api/             # Go-based API Ingress (Lambda Container)
+│   │   ├── Dockerfile
+│   │   └── main.go
+│   └── worker-processor/        # Python-based SQS/Redis Worker (Lambda Container)
+│       ├── Dockerfile
+│       └── handler.py
+└── terraform/
+    ├── compute.tf               # Lambda definitions & IAM bindings
+    ├── database.tf              # DynamoDB & ElastiCache Serverless Redis
+    ├── networking.tf            # VPC, Subnets, & SQS/DynamoDB VPC Endpoints
+    └── outputs.tf
+</code></pre>
+
+        <h3>6.2 Architectural Design Decisions</h3>
+        <ul>
+            <li><strong>Dual ECR Repositories:</strong> We decoupled the container registries into two distinct repositories (<code>ecommerce-lambda-v2</code> and <code>sqs-redis-handler-v2</code>). This isolates deployment lifecycles between the Go API gateway and the Python backend processor, preventing version collisions.</li>
+            <li><strong>Multi-AZ Subnet Allocation:</strong> Ensured private subnets are strictly mapped to distinct Availability Zones (e.g., <code>us-east-1a</code> and <code>us-east-1b</code>) to satisfy AWS compliance constraints for ElastiCache Serverless and multi-AZ VPC interface endpoints.</li>
+            <li><strong>CI/CD Pipeline Phasing:</strong> Resolved the container-lambda chicken-and-egg deployment puzzle by structuring GitHub Actions into a multi-pass apply strategy: provisioning core infrastructure and ECR skeletons first, pushing compiled Docker images, and finalizing the Lambda deployments.</li>
+        </ul>
     </section>
 
 </body>
