@@ -35,20 +35,20 @@
     <section>
         <h2>Technical Foundation</h2>
         <div class="skills">
-            <div><strong>Systems & Backend:</strong> C, Golang, Ruby on Rails, Python, PostgreSQL, Redis, SQL Procedures, Bash Scripting</div>
+            <div><strong>Systems & Backend:</strong> C, Golang, Ruby on Rails, Python, PostgreSQL, Redis, SQL Procedures, SQL Query Optimization, Bash Scripting</div>
             <div><strong>Infrastructure & AI:</strong> AI-Assisted Development, AWS, Terraform (IaC), Docker, Monitoring</div>
             <div><strong>Leadership:</strong> Architectural Strategy, Mentorship, Agile</div>
         </div>
     </section>
 
     <section>
-        <h2>AI-Driven Development & Acceleration</h2>
+        <h2>AI-Driven Development &amp; Acceleration</h2>
         <p>Leveraging generative AI and LLMs as a force multiplier to accelerate system comprehension, eliminate boilerplate friction, and augment deep diagnostic troubleshooting—while maintaining rigorous manual verification guardrails.</p>
         <ul>
-            <li><strong>Legacy Codebase Navigation:</strong> Utilizing AI models to rapidly parse and trace deep execution call hierarchies and data flow paths across massive, unfamiliar C and Go repositories, significantly reducing engineering onboarding latency.</li>
-            <li><strong>Automated Testing & Boilerplate Scaffolding:</strong> Bootstrapping extensive unit and integration test fixtures, baseline Terraform infrastructure-as-code configuration maps, and repetitive backend scaffolding to optimize baseline coverage and skip routine setup tasks.</li>
-            <li><strong>Advanced System Debugging & Core Dump Analysis:</strong> Deploying AI to identify patterns in dense diagnostic logs, stack anomalies, and memory outputs during complex debugging sequences where traditional tools like <code>gdb</code> yield limited stack context.</li>
-            <li><strong>Rigorous Quality Control & Guardrails:</strong> Maintaining absolute domain oversight. Recognizing that models can generate syntactically plausible but contextually flawed architecture, every AI output undergoes strict manual verification, deep code review, and sandboxed testing before production integration.</li>
+            <li><strong>Legacy Codebase Navigation:</strong> Utilizing AI models to rapidly parse and trace deep execution call hierarchies and data flow paths across massive, unfamiliar C and Ruby repositories, in-house call flow languages, and complex XML/YAML configurations, significantly reducing engineering onboarding latency.</li>
+            <li><strong>Automated Testing &amp; Boilerplate Scaffolding:</strong> Bootstrapping extensive unit and integration test fixtures, baseline Terraform infrastructure-as-code configuration maps, and repetitive backend scaffolding to optimize baseline coverage and skip routine setup tasks.</li>
+            <li><strong>Advanced System Debugging &amp; Core Dump Analysis:</strong> Deploying AI to identify patterns in dense diagnostic logs, stack anomalies, and memory outputs during complex debugging sequences where traditional tools like <code>gdb</code> yield limited stack context.</li>
+            <li><strong>Rigorous Quality Control &amp; Guardrails:</strong> Maintaining absolute domain oversight. Recognizing that models can generate syntactically plausible but contextually flawed architecture, every AI output undergoes strict manual verification, deep code review, and sandboxed testing before production integration.</li>
         </ul>
     </section>
 
@@ -66,17 +66,17 @@
         <p>To bridge this gap, engineered a low-latency routing daemon that managed persistent, pre-established upstream transceiver binds. The engine safely decoupled the Kannel processes, intercepted outbound transaction payloads, mapped them to active connection pools, and reverse-routed inbound delivery notifications back to the correct originating backend worker nodes. Leveraged non-blocking socket I/O and POSIX concurrency mechanisms to ensure deterministic, sub-millisecond message delivery paths under highly volatile, mission-critical E911 operational loads.</p>
 
         <h3>2. Proprietary Peer-to-Peer Geo-Replication System</h3>
-        <p>Architected a proprietary, bi-directional peer-to-peer replication engine to synchronize account data and system states in real time across distributed databases. To respect strict relational foreign key constraints, engineered custom operational ordering logic for <code>INSERT</code>, <code>UPDATE</code>, and <code>DELETE</code> routines, preventing cascading constraint violations and deadlocks. Built the sync pipeline to consistently handle a sustained real-time load of 750 accounts per minute (averaging 1,500 synchronization messages per minute).</p>
+        <p>Architected a proprietary, bi-directional peer-to-peer replication engine to synchronize account data and system states in real time across distributed databases. To respect strict relational foreign key constraints, engineered custom operational ordering logic for <code>INSERT</code>, <code>UPDATE</code>, and <code>DELETE</code> routines, preventing cascading constraint violations and deadlocks. Built the sync pipeline to consistently handle a sustained real-time modifications of 750/accounts per minute.</p>
 
-        <h3>3. Cross-System Session Correlation Engine (Distributed Event Streaming &amp; Auditing)</h3>
-        <p>Architected a high-performance distributed session tracking engine in Go to correlate disparate inbound and outbound multimedia messages (MMS) across global operating regions (e.g., US and Europe). When an enterprise message is received in one region, the system captures metadata—including the originating and destination routing pairs, an enterprise ID, and a distinct payload checksum—and streams the event to a globally shared Kafka topic.</p>
-        <p>To establish unified cross-system audit trails without introducing tight coupling, decoupled consumers in both regions ingest the stream asynchronously, persisting incoming events to localized PostgreSQL transaction tables. Upon processing the corresponding secondary leg of the message traffic, the downstream consumers execute highly optimized database lookups against the session states to detect routing matches. Once confirmed, the engine dynamically links the independent session IDs and synthesizes a master correlation Call Detail Record (CDR), providing compliance auditors with complete, low-latency visibility into multi-leg message flows across isolated, legacy telecom infrastructures.</p>
+        <h3>3. Cross-System Session Correlation Engine &amp; Performance Migration (Ruby &rarr; Go, Redis, Kafka)</h3>
+        <p>Architected a high-performance distributed session tracking engine—originally developed in Ruby as the core platform standard—to correlate disparate inbound and outbound multimedia messages (MMS) across global operating regions (e.g., US and Europe). When a message is captured in one region, the system extracts metadata routing pairs, enterprise IDs, and payload checksums, streaming the events to a globally shared Kafka topic.</p>
+        <p>To optimize infrastructure limits and proactively insulate the primary PostgreSQL database from high-volume transaction write bottlenecks, I re-engineered the ingestion layer to buffer data directly into a low-latency Redis queue instead of executing direct database table writes. Furthermore, to leverage advanced performance fixes and robust cluster handling inside newer Kafka library toolchains, I spearheaded the technical migration porting the entire system from Ruby to Go. This structural pivot dramatically reduced the database I/O footprint, slashed execution latency bounds, and delivered a highly resilient, concurrent messaging layer across telecom zones.</p>
 
         <h3>4. High-Scale Bare-Metal Database Migration Infrastructure (5M+ Subscribers)</h3>
         <p>Orchestrated the large-scale, zero-downtime database migration of core production environments to provision and seed five new high-performance bare-metal server nodes. Successfully planned and executed the transfer of a massive data footprint consisting of over 5 million active subscriber profiles and more than 10 million historical messaging records across distributed relational schemas.</p>
         <p>Developed rigorous automated data validation, checksum cross-checking, and state-verification scripts to ensure absolute schema integrity, preventing transactional data loss or record corruption during high-volume cutover windows while maintaining continuous system availability.</p>
 
-        <h3>5. High-Throughput Linux System Daemon &amp; Request Scheduler</h3>
+        <h3>5. High-Throughput Linux System Daemon & Request Scheduler</h3>
         <p>Architected a highly scalable, multi-process Linux daemon framework in C designed to orchestrate and dispatch immediate and deferred tasks across local and remote distributed nodes. Engineered an event-driven core utilizing a combination of SysV Message Queues and POSIX shared memory for low-latency, high-throughput Inter-Process Communication (IPC). Built a dedicated, non-blocking background runner to poll and track deferred request lifecycles persisted in PostgreSQL. To ensure future extensibility, designed a modular plugin architecture allowing developers to drop in new, compiled request-handling libraries using standard code templates and configuration hot-reloading.</p>
 
         <h3>6. High-Scale Data Ingestion Migration &amp; AI-Assisted Porting (Ruby &rarr; Go, C, Kafka)</h3>
