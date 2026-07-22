@@ -113,5 +113,16 @@
         <p>If downstream processors encounter system constraints or validation failures, the state record is automatically enriched with error flags and directed to a secondary Dead Letter Queue (DLQ). A continuous audit pipeline verifies the integrity of every message token against historic log checksums to ensure that zero customer records are corrupted or dropped during infrastructure migrations.</p>
     </section>
 
+    <section class="engineering-notes" style="margin-top: 40px; border-top: 2px solid #eee; padding-top: 30px;">
+        <h2>Engineering Log &amp; Design Notes</h2>
+        <p>A running history of deep technical hurdles, diagnostic investigations, and production anomalies encountered and solved during the architectural lifecycle of this system.</p>
+        
+        <ul style="list-style-type: none; padding-left: 0;">
+            <li style="margin-bottom: 20px;">
+                <strong><a href="notes/postgres-locking.html" style="font-size: 1.1em; color: #0066cc; text-decoration: none; font-weight: bold;">Case Study: Deep Locking Anomalies in High-Concurrency PostgreSQL Pipelines &rarr;</a></strong>
+                <p style="margin: 5px 0 0 0; color: #555;">An architectural post-mortem analyzing deep page-level lock contention under heavy read/write transactional load, and the custom index strategies used to protect p99 latency bounds.</p>
+            </li>
+        </ul>
+    </section>
 </body>
 </html>
