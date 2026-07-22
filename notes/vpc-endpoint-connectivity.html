@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Note: VPC Endpoint Connectivity Hurdles | Richard Fox</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; line-height: 1.6; color: #333; max-width: 800px; margin: 40px auto; padding: 0 20px; }
+        .back-link { display: inline-block; margin-bottom: 20px; color: #0066cc; text-decoration: none; font-weight: bold; }
+        .back-link:hover { text-decoration: underline; }
+        h1 { margin: 0 0 10px 0; font-size: 2em; border-bottom: 2px solid #eee; padding-bottom: 20px; }
+        h2 { margin-top: 35px; border-bottom: 1px solid #ddd; padding-bottom: 8px; color: #111; }
+        code { background: #f4f4f4; padding: 2px 6px; border-radius: 4px; font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace; font-size: 0.9em; }
+        pre { background: #f4f4f4; padding: 15px; border-radius: 6px; overflow-x: auto; border: 1px solid #e0e0e0; }
+        ul { padding-left: 20px; }
+        li { margin-bottom: 10px; }
+    </style>
+</head>
+<body>
+
+    <a href="../design.html" class="back-link">&larr; Return to System Design</a>
+
+    <header>
+        <h1>Operational Note: Troubleshooting AWS VPC Endpoint Connection Timeouts</h1>
+        <p style="color: #666; font-style: italic;">Tags: AWS, Networking, VPC, Security Groups</p>
+    </header>
+
+    <section>
+        <h2>The Situation</h2>
+        <p>[Describe what you were trying to connect together here—e.g., trying to pull data from a private service or cloud resource over an AWS VPC Endpoint interface without routing traffic out to the public internet.]</p>
+    </section>
+
+    <section>
+        <h2>The Hurdle / Error Encountered</h2>
+        <p>[Dump the specific symptoms or errors you hit here. For example: requests silently hanging until hitting a hard gateway timeout, or specific connection refused logs.]</p>
+    </section>
+
+    <section>
+        <h2>Diagnostic Steps &amp; Root Cause</h2>
+        <p>The root bottleneck typically traces back to one of three isolation layers:</p>
+        <ul>
+            <li><strong>Security Group Inbound Primitives:</strong> The target VPC endpoint's security group must explicitly allow inbound traffic on the service port (e.g., 443 or database ports) originating from the client microservice's private security group or subnet CIDR block.</li>
+            <li><strong>Subnet Routing &amp; AZ Alignment:</strong> Ensuring the client service is residing in an Availability Zone (AZ) that matches one of the subnets the Interface Endpoint was provisioned across.</li>
+            <li><strong>Private DNS Resolution:</strong> Verifying if <code>Enable Private DNS Name</code> is toggled on, allowing local service calls to seamlessly override public endpoints without altering codebase configuration strings.</li>
+        </ul>
+    </section>
+
+    <section>
+        <h2>The Fix &amp; Verification</h2>
+        <p>[Document your specific solution here, along with any validation commands you ran—like using <code>nc -zv</code> or <code>curl</code> inside the container environment to verify the network pipe is fully open.]</p>
+    </section>
+
+</body>
+</html>
