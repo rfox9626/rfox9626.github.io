@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Enterprise Alarming & Incident-Routing System | Architecture Portfolio</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        aws: {
+                            dark: '#0f172a',
+                            card: '#1e293b',
+                            accent: '#ff9900',
+                            blue: '#38bdf8'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-aws-dark text-slate-100 font-sans antialiased selection:bg-aws-accent selection:text-aws-dark">
+
+    <!-- Navigation Header -->
+    <header class="sticky top-0 z-50 bg-aws-dark/80 backdrop-blur border-b border-slate-800">
+        <div class="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+                <span class="w-3 h-3 bg-aws-accent rounded-full animate-pulse"></span>
+                <span class="font-bold text-lg tracking-wider text-white">SYSTEMS ARCHITECTURE PORTFOLIO</span>
+            </div>
+            <div class="text-sm text-slate-400">
+                Joint AI-Human Collaborative Engineering Project
+            </div>
+        </div>
+    </header>
+
+    <!-- Hero Section -->
+    <section class="max-w-5xl mx-auto px-6 pt-20 pb-12 text-center">
+        <span class="inline-block px-3 py-1 mb-4 text-xs font-semibold tracking-wider text-aws-accent uppercase bg-aws-accent/10 rounded-full border border-aws-accent/20">
+            Phase 1: Architecture & Design
+        </span>
+        <h1 class="text-4xl md:text-5xl font-extrabold tracking-tight text-white mb-6">
+            AWS AI/Human Enterprise Alarming & Incident-Routing System
+        </h1>
+        <p class="text-lg md:text-xl text-slate-300 max-w-3xl mx-auto leading-relaxed">
+            An intelligent, event-driven serverless alerting mesh designed to eliminate alert fatigue, perform autonomous root-cause analysis via Amazon Bedrock, and route incidents dynamically using Amazon EventBridge.
+        </p>
+    </section>
+
+    <!-- Architecture Diagram Showcase -->
+    <section class="max-w-6xl mx-auto px-6 mb-20">
+        <div class="bg-aws-card border border-slate-800 rounded-2xl p-4 md:p-6 shadow-2xl">
+            <h3 class="text-xl font-bold text-white mb-4 flex items-center">
+                <svg class="w-5 h-5 text-aws-blue mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 5a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM14 5a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1V5zM4 15a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1H5a1 1 0 01-1-1v5zM14 15a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1v-5z"></path></svg>
+                System Architecture Blueprint
+            </h3>
+            <div class="overflow-hidden rounded-xl border border-slate-700 bg-slate-900">
+                <img src="alarm_reporting.png" alt="AWS AI/Human Enterprise Alarming System Architecture Diagram" class="w-full h-auto object-cover">
+            </div>
+            <p class="text-xs text-slate-400 mt-3 text-center">
+                High-level pipeline illustrating event ingestion, EventBridge content filtering, Bedrock AI investigation, and multi-channel routing.
+            </p>
+        </div>
+    </section>
+
+    <!-- Core Blueprint Details Grid -->
+    <section class="max-w-6xl mx-auto px-6 mb-20">
+        <h2 class="text-2xl font-bold text-white mb-8 border-b border-slate-800 pb-3">Core Technical Specifications</h2>
+        <div class="grid md:grid-cols-3 gap-6">
+            
+            <!-- Card 1 -->
+            <div class="bg-aws-card border border-slate-800 rounded-xl p-6">
+                <div class="text-aws-blue font-mono text-sm mb-2">01 / INGESTION & ROUTING</div>
+                <h4 class="text-lg font-bold text-white mb-3">EventBridge Custom Bus</h4>
+                <p class="text-slate-300 text-sm leading-relaxed">
+                    Decouples microservices and legacy monolith telemetry sources. Uses server-side JSON filtering rules to split workflows by severity (e.g., Critical vs. Operational).
+                </p>
+            </div>
+
+            <!-- Card 2 -->
+            <div class="bg-aws-card border border-slate-800 rounded-xl p-6">
+                <div class="text-aws-accent font-mono text-sm mb-2">02 / INTELLIGENCE LAYER</div>
+                <h4 class="text-lg font-bold text-white mb-3">Amazon Bedrock Analysis</h4>
+                <p class="text-slate-300 text-sm leading-relaxed">
+                    Automates initial log triage and metric correlation using advanced foundation models (such as Claude/Nova) before escalating structured findings to human operators.
+                </p>
+            </div>
+
+            <!-- Card 3 -->
+            <div class="bg-aws-card border border-slate-800 rounded-xl p-6">
+                <div class="text-emerald-400 font-mono text-sm mb-2">03 / SECURITY & AUDIT</div>
+                <h4 class="text-lg font-bold text-white mb-3">Least-Privilege & Ledger</h4>
+                <p class="text-slate-300 text-sm leading-relaxed">
+                    Enforces strict IAM trust boundaries. All state transitions (Triggered, Acknowledged, Resolved) are immutably recorded in Amazon DynamoDB for post-incident audits.
+                </p>
+            </div>
+
+        </div>
+    </section>
+
+    <!-- Sample Event Schema Section -->
+    <section class="max-w-6xl mx-auto px-6 mb-24">
+        <h2 class="text-2xl font-bold text-white mb-4">Standardized Event Data Contract</h2>
+        <p class="text-slate-300 text-sm mb-6">Every telemetry producer conforms to this strict EventBridge schema payload:</p>
+        <div class="bg-slate-950 border border-slate-800 rounded-xl p-6 overflow-x-auto font-mono text-xs text-aws-blue">
+<pre>{
+  "version": "0",
+  "id": "c6b84733-4b1e-41ec-b13c-932d8471b41d",
+  "detail-type": "SystemAlarm",
+  "source": "com.enterprise.monitoring",
+  "account": "123456789012",
+  "time": "2026-07-22T04:14:30Z",
+  "detail": {
+    "alarmId": "ALRM-9921",
+    "serviceName": "payment-processor",
+    "severity": "CRITICAL",
+    "errorCode": "ERR_DATABASE_DEADLOCK",
+    "message": "Persistent connection pool exhaustion and transaction lock contention detected."
+  }
+}</pre>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="border-t border-slate-800 py-8 text-center text-xs text-slate-500">
+        <p>Built with precision architecture patterns. Designed via human-directed AI collaboration.</p>
+    </footer>
+
+</body>
+</html>
