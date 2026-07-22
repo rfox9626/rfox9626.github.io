@@ -3,143 +3,114 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Technical Architecture & Design | Richard Fox</title>
+    <title>High-Concurrency E-Commerce Engine &amp; Fulfillment Pipeline | Technical Design</title>
     <style>
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; line-height: 1.6; color: #333; max-width: 800px; margin: 40px auto; padding: 0 20px; }
-        header { border-bottom: 2px solid #eee; padding-bottom: 20px; }
-        .back-link { display: inline-block; margin-bottom: 20px; color: #0066cc; text-decoration: none; font-weight: bold; }
-        .back-link:hover { text-decoration: underline; }
-        h1 { margin: 0 0 10px 0; font-size: 2em; }
-        h2 { margin-top: 35px; border-bottom: 1px solid #ddd; padding-bottom: 8px; color: #111; }
-        h3 { margin-top: 25px; color: #222; }
-        section { margin-top: 30px; }
-        code { background: #f4f4f4; padding: 2px 6px; border-radius: 4px; font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace; font-size: 0.9em; }
-        pre { background: #f4f4f4; padding: 15px; border-radius: 6px; overflow-x: auto; border: 1px solid #e0e0e0; }
-        pre code { background: none; padding: 0; border-radius: 0; font-size: 0.85em; }
-        blockquote { margin: 20px 0; padding: 10px 20px; background: #f9f9f9; border-left: 4px solid #0066cc; color: #555; italic; }
-        table { width: 100%; border-collapse: collapse; margin: 20px 0; }
-        th, td { text-align: left; padding: 10px; border-bottom: 1px solid #ddd; }
-        th { background: #f4f4f4; font-weight: bold; }
-        ul { padding-left: 20px; }
-        li { margin-bottom: 8px; }
-        .meta-box { background: #f8fafc; border: 1px solid #e2e8f0; padding: 15px; border-radius: 6px; margin: 20px 0; display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
-        @media (max-width: 600px) { .meta-box { grid-template-columns: 1fr; } }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; line-height: 1.6; color: #333; max-width: 900px; margin: 40px auto; padding: 0 20px; }
+        header { border-bottom: 2px solid #eee; padding-bottom: 20px; margin-bottom: 30px; }
+        h1 { margin: 0 0 10px 0; font-size: 2.2em; }
+        h2 { border-bottom: 1px solid #ddd; padding-bottom: 8px; margin-top: 40px; color: #111; }
+        h3 { margin-top: 30px; color: #444; }
+        .back-link { font-weight: bold; color: #0066cc; display: inline-block; margin-bottom: 20px; }
+        a { color: #0066cc; text-decoration: none; }
+        a:hover { text-decoration: underline; }
+        code { background: #f4f4f4; padding: 2px 6px; border-radius: 4px; font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace; font-size: 0.95em; }
+        pre { background: #f8f9fa; border: 1px solid #e1e4e6; padding: 15px; border-radius: 6px; overflow-x: auto; }
+        pre code { background: none; padding: 0; font-size: 0.9em; }
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; margin-top: 20px; }
+        @media (max-width: 768px) { .grid { grid-template-columns: 1fr; } }
+        .highlight-box { background-color: #f0f7ff; border-left: 4px solid #0066cc; padding: 15px; border-radius: 0 6px 6px 0; margin: 20px 0; }
     </style>
 </head>
 <body>
 
-    <a href="index.html" class="back-link">&larr; Return to Profile</a>
+    <a href="index.html" class="back-link">← Back to Main Profile</a>
 
     <header>
         <h1>High-Concurrency E-Commerce Engine &amp; Fulfillment Pipeline</h1>
-        <p><strong>System Architecture &amp; Technical Design Specifications</strong></p>
+        <p><strong>System Architecture &amp; Technical Design Spec</strong></p>
     </header>
 
-    <div class="meta-box">
-        <div><strong>Core Stack:</strong> Golang, PostgreSQL, Redis, Kafka</div>
-        <div><strong>Architecture Pattern:</strong> Event-Driven, CQRS, Outbox Pattern</div>
-        <div><strong>Concurrency Strategy:</strong> Optimistic Locking &amp; Distributed Leases</div>
-        <div><strong>Target SLA:</strong> p99 Latency less than 50ms under peak load</div>
-    </div>
+    <section>
+        <h2>1. System Overview &amp; Ingestion Objectives</h2>
+        <p>This design details an event-driven distributed ingestion topology engineered to process real-time transaction states, resolve localized inventory race conditions, and guarantee atomic state tracking at scale. The system decouples immediate ingress collection layers from intensive downstream fulfillment engines using persistent transaction buffers.</p>
+        
+        <div class="highlight-box">
+            <strong>Core Throughput Metric:</strong> Designed and validated to isolate write paths and maintain structural safety under highly concurrent spikes, processing operational state modifications safely without introducing relational table deadlocks.
+        </div>
+    </section>
 
     <section>
-        <h2>1. Executive Summary &amp; Core Challenges</h2>
-        <p>This document details the architectural specifications for a distributed, high-throughput e-commerce core designed to eliminate common runtime hazards under heavy seasonal traffic surges. The system isolates and resolves three classic transactional bottlenecks:</p>
+        <h2>2. Data Ingress Schema</h2>
+        <p>All transactional actions pass through strict schema filters at the edge. The system ingestion nodes accept structured payloads mapped to distinct tracking fields, ensuring structural consistency before pushing records down the event queues.</p>
+
+        <h3>Structured Input Payload Example</h3>
+        <p>The system expects validation matching this standardized model format during client checkout sequences:</p>
+<pre><code>{
+  "transaction_id": "tx-8b6f4e1a-c5d9-4b23-a12f-f67c34e59012",
+  "user_id": "user-789",
+  "action": "checkout",
+  "ip_address": "192.168.2.123",
+  "status": "success",
+  "timestamp": "1753110000"
+}</code></pre>
+
+        <h2>3. Execution Scenarios</h2>
+        
+        <h3>Success Scenario</h3>
+        <p><strong>Input:</strong></p>
+<pre><code>{
+  "transaction_id": "tx-5a1e2b3c-4d5e-6f7a-8b9c-0d1e2f3a4b5c",
+  "user_id": "user-789",
+  "action": "checkout",
+  "ip_address": "192.168.2.123",
+  "status": "success",
+  "timestamp": "1753110000"
+}</code></pre>
+        <p><strong>Result:</strong> Payload successfully validated by edge nodes, buffered into the ingestion queue, and safely persisted to the datastore layer with a decoupled asynchronous worker acknowledgment.</p>
+
+        <h3>Restricted User (Early Termination)</h3>
+        <p><strong>Input:</strong></p>
+<pre><code>{
+  "transaction_id": "tx-00000000-0000-0000-0000-000000000000",
+  "user_id": "user-789",
+  "action": "checkout",
+  "ip_address": "192.168.2.123",
+  "status": "fail",
+  "timestamp": "1753110000"
+}</code></pre>
+        <p><strong>Result:</strong> <code>HTTP 403 Forbidden</code> thrown instantly at the API gateway layer via middleware validation filters. The system terminates the request immediately and never touches backend queues or database connection pools, successfully protecting core infrastructure throughput.</p>
+    </section>
+
+    <section>
+        <h2>4. Technical Topology &amp; Decoupled Flow</h2>
+
+        <h3>System Architecture Flow Diagram</h3>
+        <div style="text-align: center; margin: 20px 0; background: #f8f9fa; border: 1px solid #e1e4e6; padding: 15px; border-radius: 6px;">
+            <img src="Gemini_Generated_Image_cz0yo5cz0yo5cz0y.png" alt="High-Concurrency E-Commerce System Architecture Flow" style="max-width: 100%; height: auto; border-radius: 4px; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
+        </div>
+        
+        <div class="grid">
+            <div>
+                <h3>Ingression Buffer Layer</h3>
+                <p>Edge microservices receive the transaction token payloads. Instead of hitting the relational layer immediately, actions are packed and routed to high-throughput <strong>Redis stream queues</strong>. This pattern shields the primary datastore from sudden query spikes and isolates short-term compute failures.</p>
+            </div>
+            <div>
+                <h3>State Correlation &amp; Processing</h3>
+                <p>Asynchronous background daemons ingest payloads from the queue structures. A centralized <strong>Correlation Engine</strong> evaluates incoming state actions against localized caches, processing state checkouts and managing inventory counters atomically using pessimistic locking mechanisms where data drift could occur.</p>
+            </div>
+        </div>
+
+        <h3>Database Architecture &amp; Optimization Guardrails</h3>
+        <p>To back up high concurrency demands, the underlying relational tables utilize specialized optimization parameters to clean up long transactions:</p>
         <ul>
-            <li><strong>Inventory Race Conditions:</strong> Preventing overselling during flash-sale concurrency spikes without relying on heavy, database-level blocking table locks.</li>
-            <li><strong>Decoupled Payment Processing:</strong> Ensuring third-party API latencies (e.g., payment gateways) never degrade the throughput of the primary customer checkout experience.</li>
-            <li><strong>Atomic Ledger Reliability:</strong> Guaranteeing absolute consistency between order placements, financial tracking data, and downstream fulfillment logs.</li>
+            <li><strong>DDL Partition Child Tables:</strong> Relational historical tables are dynamically provisioned based on timestamp ranges to keep index sizes small and read operations local.</li>
+            <li><strong>Lock Mitigation:</strong> Inbound lookups avoid long table-level locks by isolating operations to precise index boundaries and separating heavy reporting views from core writing pipes.</li>
         </ul>
     </section>
 
     <section>
-        <h2>2. Distributed Event-Driven Flow</h2>
-        <p>The system decouples the highly critical user-facing checkout process from slow, external third-party services by converting synchronous API operations into an asynchronous event stream driven by a resilient messaging ring.</p>
-        
-        <pre><code>[Client Request] 
-       │ (REST / Go Gin API)
-       ▼
-[Order Service] ──(Atomic Local Write)──&gt; [PostgreSQL DB (Order + Outbox Table)]
-       │
-       ▼ (Transactional Outbox Poller / Debezium CDC)
-  [Kafka Topic: order.events.validated]
-       │
-       ├──&gt; [Payment Worker] ──&gt; External Gateway (Stripe/PayPal API)
-       │
-       └──&gt; [Inventory Worker] ──&gt; Local State Deduplicator &amp; Allocator
-       │
-       └──&gt; [Fulfillment Microservice] ──&gt; Packing / Shipping Pipeline Warehouse Dispatch</code></pre>
-    </section>
-
-    <section>
-        <h2>3. Concurrency Strategy &amp; Race Condition Prevention</h2>
-        <p>To scale past traditional database write-blocks, the core inventory system drops raw <code>SELECT FOR UPDATE</code> paradigms. Instead, it utilizes a dual-layer concurrency mechanism:</p>
-        
-        <h3>Layer 1: In-Memory Pre-Allocation (Redis)</h3>
-        <p>Stock quantities are mirrored inside Redis hashes. Immediate inventory checks and reservation subtractions are validated atomically via Lua scripts running single-threaded execution passes directly inside the memory layer. This weeds out 99% of invalid requests instantly before they can impact relational disk storage assets.</p>
-
-        <h3>Layer 2: Optimistic Database Concurrency Control (OCC)</h3>
-        <p>When write-back routines persist adjustments down into the relational PostgreSQL core, the transactions utilize a strict operational versioning check:</p>
-        
-        <pre><code class="language-sql">UPDATE inventory_sku 
-SET stock_quantity = stock_quantity - :quantity, version = version + 1
-WHERE sku_id = :sku_id AND version = :current_version;</code></pre>
-        
-        <p>If another database worker commits an update first, the version mismatch is flagged immediately, triggering an asynchronous worker back-off and retry loop sequence.</p>
-    </section>
-
-    <section>
-        <h2>4. Transactional Integrity (The Outbox Pattern)</h2>
-        <blockquote>
-            <strong>Design Rule:</strong> A microservice must never execute a local database write and concurrently publish a message to a distributed broker within a raw code block, as network splits risk leaving the systems in mismatched states.
-        </blockquote>
-        <p>To preserve absolute transactional execution records, the pipeline implements the <strong>Transactional Outbox Pattern</strong>. Order creations and corresponding system events are written into the same local PostgreSQL transactional boundary using standard ACID properties:</p>
-
-        <table>
-            <thead>
-                <tr>
-                    <th>Table: order_outbox</th>
-                    <th>Type</th>
-                    <th>Purpose</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr>
-                    <code>id</code>
-                    <td>UUID (PK)</td>
-                    <td>Unique tracking token for system events.</td>
-                </tr>
-                <tr>
-                    <code>aggregate_type</code>
-                    <td>VARCHAR</td>
-                    <td>Defines target domains (e.g., <code>OrderService</code>).</td>
-                </tr>
-                <tr>
-                    <code>payload</code>
-                    <td>JSONB</td>
-                    <td>Complete metadata, schema variants, and payload context.</td>
-                </tr>
-                <tr>
-                    <code>status</code>
-                    <td>VARCHAR</td>
-                    <td>Lifecycle flag: <code>PENDING</code>, <code>PROCESSED</code>, <code>FAILED</code>.</td>
-                </tr>
-            </tbody>
-        </table>
-        
-        <p>A highly optimized transaction parser reads this table continuously, streaming messages to Kafka safely before updating the row status to completed.</p>
-    </section>
-
-    <section class="engineering-notes" style="margin-top: 40px; border-top: 2px solid #eee; padding-top: 30px;">
-        <h2>Engineering Log &amp; Design Notes</h2>
-        <p>A running history of deep technical hurdles, diagnostic investigations, and production anomalies encountered and solved during the architectural lifecycle of this system.</p>
-        
-        <ul style="list-style-type: none; padding-left: 0;">
-            <li style="margin-bottom: 20px;">
-                <strong><a href="notes/postgres-locking.html" style="font-size: 1.1em; color: #0066cc; text-decoration: none; font-weight: bold;">Case Study: Deep Locking Anomalies in High-Concurrency PostgreSQL Pipelines &rarr;</a></strong>
-                <p style="margin: 5px 0 0 0; color: #555;">An architectural post-mortem analyzing deep page-level lock contention under heavy read/write transactional load, and the custom index strategies used to protect p99 latency bounds.</p>
-            </li>
-        </ul>
+        <h2>5. Failure Recovery &amp; Safe Auditing Paths</h2>
+        <p>If downstream processors encounter system constraints or validation failures, the state record is automatically enriched with error flags and directed to a secondary Dead Letter Queue (DLQ). A continuous audit pipeline verifies the integrity of every message token against historic log checksums to ensure that zero customer records are corrupted or dropped during infrastructure migrations.</p>
     </section>
 
 </body>
