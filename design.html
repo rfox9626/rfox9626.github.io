@@ -1,16 +1,150 @@
-<!-- Engineering Notes Section for design.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Technical Architecture & Design | Richard Fox</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; line-height: 1.6; color: #333; max-width: 800px; margin: 40px auto; padding: 0 20px; }
+        header { border-bottom: 2px solid #eee; padding-bottom: 20px; }
+        .back-link { display: inline-block; margin-bottom: 20px; color: #0066cc; text-decoration: none; font-weight: bold; }
+        .back-link:hover { text-decoration: underline; }
+        h1 { margin: 0 0 10px 0; font-size: 2em; }
+        h2 { margin-top: 35px; border-bottom: 1px solid #ddd; padding-bottom: 8px; color: #111; }
+        h3 { margin-top: 25px; color: #222; }
+        section { margin-top: 30px; }
+        code { background: #f4f4f4; padding: 2px 6px; border-radius: 4px; font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace; font-size: 0.9em; }
+        pre { background: #f4f4f4; padding: 15px; border-radius: 6px; overflow-x: auto; border: 1px solid #e0e0e0; }
+        pre code { background: none; padding: 0; border-radius: 0; font-size: 0.85em; }
+        blockquote { margin: 20px 0; padding: 10px 20px; background: #f9f9f9; border-left: 4px solid #0066cc; color: #555; italic; }
+        table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+        th, td { text-align: left; padding: 10px; border-bottom: 1px solid #ddd; }
+        th { background: #f4f4f4; font-weight: bold; }
+        ul { padding-left: 20px; }
+        li { margin-bottom: 8px; }
+        .meta-box { background: #f8fafc; border: 1px solid #e2e8f0; padding: 15px; border-radius: 6px; margin: 20px 0; display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+        @media (max-width: 600px) { .meta-box { grid-template-columns: 1fr; } }
+    </style>
+</head>
+<body>
+
+    <a href="index.html" class="back-link">&larr; Return to Profile</a>
+
+    <header>
+        <h1>High-Concurrency E-Commerce Engine &amp; Fulfillment Pipeline</h1>
+        <p><strong>System Architecture &amp; Technical Design Specifications</strong></p>
+    </header>
+
+    <div class="meta-box">
+        <div><strong>Core Stack:</strong> Golang, PostgreSQL, Redis, Kafka</div>
+        <div><strong>Architecture Pattern:</strong> Event-Driven, CQRS, Outbox Pattern</div>
+        <div><strong>Concurrency Strategy:</strong> Optimistic Locking &amp; Distributed Leases</div>
+        <div><strong>Target SLA:</strong> p99 Latency less than 50ms under peak load</div>
+    </div>
+
+    <section>
+        <h2>1. Executive Summary &amp; Core Challenges</h2>
+        <p>This document details the architectural specifications for a distributed, high-throughput e-commerce core designed to eliminate common runtime hazards under heavy seasonal traffic surges. The system isolates and resolves three classic transactional bottlenecks:</p>
+        <ul>
+            <li><strong>Inventory Race Conditions:</strong> Preventing overselling during flash-sale concurrency spikes without relying on heavy, database-level blocking table locks.</li>
+            <li><strong>Decoupled Payment Processing:</strong> Ensuring third-party API latencies (e.g., payment gateways) never degrade the throughput of the primary customer checkout experience.</li>
+            <li><strong>Atomic Ledger Reliability:</strong> Guaranteeing absolute consistency between order placements, financial tracking data, and downstream fulfillment logs.</li>
+        </ul>
+    </section>
+
+    <section>
+        <h2>2. Distributed Event-Driven Flow</h2>
+        <p>The system decouples the highly critical user-facing checkout process from slow, external third-party services by converting synchronous API operations into an asynchronous event stream driven by a resilient messaging ring.</p>
+        
+        <pre><code>[Client Request] 
+       │ (REST / Go Gin API)
+       ▼
+[Order Service] ──(Atomic Local Write)──&gt; [PostgreSQL DB (Order + Outbox Table)]
+       │
+       ▼ (Transactional Outbox Poller / Debezium CDC)
+  [Kafka Topic: order.events.validated]
+       │
+       ├──&gt; [Payment Worker] ──&gt; External Gateway (Stripe/PayPal API)
+       │
+       └──&gt; [Inventory Worker] ──&gt; Local State Deduplicator &amp; Allocator
+       │
+       └──&gt; [Fulfillment Microservice] ──&gt; Packing / Shipping Pipeline Warehouse Dispatch</code></pre>
+    </section>
+
+    <section>
+        <h2>3. Concurrency Strategy &amp; Race Condition Prevention</h2>
+        <p>To scale past traditional database write-blocks, the core inventory system drops raw <code>SELECT FOR UPDATE</code> paradigms. Instead, it utilizes a dual-layer concurrency mechanism:</p>
+        
+        <h3>Layer 1: In-Memory Pre-Allocation (Redis)</h3>
+        <p>Stock quantities are mirrored inside Redis hashes. Immediate inventory checks and reservation subtractions are validated atomically via Lua scripts running single-threaded execution passes directly inside the memory layer. This weeds out 99% of invalid requests instantly before they can impact relational disk storage assets.</p>
+
+        <h3>Layer 2: Optimistic Database Concurrency Control (OCC)</h3>
+        <p>When write-back routines persist adjustments down into the relational PostgreSQL core, the transactions utilize a strict operational versioning check:</p>
+        
+        <pre><code class="language-sql">UPDATE inventory_sku 
+SET stock_quantity = stock_quantity - :quantity, version = version + 1
+WHERE sku_id = :sku_id AND version = :current_version;</code></pre>
+        
+        <p>If another database worker commits an update first, the version mismatch is flagged immediately, triggering an asynchronous worker back-off and retry loop sequence.</p>
+    </section>
+
+    <section>
+        <h2>4. Transactional Integrity (The Outbox Pattern)</h2>
+        <blockquote>
+            <strong>Design Rule:</strong> A microservice must never execute a local database write and concurrently publish a message to a distributed broker within a raw code block, as network splits risk leaving the systems in mismatched states.
+        </blockquote>
+        <p>To preserve absolute transactional execution records, the pipeline implements the <strong>Transactional Outbox Pattern</strong>. Order creations and corresponding system events are written into the same local PostgreSQL transactional boundary using standard ACID properties:</p>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>Table: order_outbox</th>
+                    <th>Type</th>
+                    <th>Purpose</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <code>id</code>
+                    <td>UUID (PK)</td>
+                    <td>Unique tracking token for system events.</td>
+                </tr>
+                <tr>
+                    <code>aggregate_type</code>
+                    <td>VARCHAR</td>
+                    <td>Defines target domains (e.g., <code>OrderService</code>).</td>
+                </tr>
+                <tr>
+                    <code>payload</code>
+                    <td>JSONB</td>
+                    <td>Complete metadata, schema variants, and payload context.</td>
+                </tr>
+                <tr>
+                    <code>status</code>
+                    <td>VARCHAR</td>
+                    <td>Lifecycle flag: <code>PENDING</code>, <code>PROCESSED</code>, <code>FAILED</code>.</td>
+                </tr>
+            </tbody>
+        </table>
+        
+        <p>A highly optimized transaction parser reads this table continuously, streaming messages to Kafka safely before updating the row status to completed.</p>
+    </section>
+
     <section class="engineering-notes" style="margin-top: 40px; border-top: 2px solid #eee; padding-top: 30px;">
         <h2>Engineering Log &amp; Design Notes</h2>
         <p>A running history of deep technical hurdles, diagnostic investigations, and production anomalies encountered and solved during the architectural lifecycle of this system.</p>
         
-        <ul>
+        <ul style="list-style-type: none; padding-left: 0;">
             <li style="margin-bottom: 20px;">
-                <strong><a href="notes/postgres-locking.html" style="font-size: 1.1em; color: #0066cc; text-decoration: none;">Case Study: Deep Locking Anomalies in High-Concurrency PostgreSQL Pipelines</a></strong>
+                <strong><a href="notes/postgres-locking.html" style="font-size: 1.1em; color: #0066cc; text-decoration: none; font-weight: bold;">Case Study: Deep Locking Anomalies in High-Concurrency PostgreSQL Pipelines &rarr;</a></strong>
                 <p style="margin: 5px 0 0 0; color: #555;">An architectural post-mortem analyzing deep page-level lock contention under heavy read/write transactional load, and the custom index strategies used to protect p99 latency bounds.</p>
             </li>
             <li style="margin-bottom: 20px;">
-                <strong><a href="notes/smpp-stateful-proxies.html" style="font-size: 1.1em; color: #0066cc; text-decoration: none;">Design Pattern: Asynchronous Stateful Proxies for Deterministic Networks</a></strong>
+                <strong><a href="notes/smpp-stateful-proxies.html" style="font-size: 1.1em; color: #0066cc; text-decoration: none; font-weight: bold;">Design Pattern: Asynchronous Stateful Proxies for Deterministic Networks &rarr;</a></strong>
                 <p style="margin: 5px 0 0 0; color: #555;">Engineering persistent transceiver binds and connection pool tracking layers when forced to adhere to legacy, site-initiated inbound traffic restrictions.</p>
             </li>
         </ul>
     </section>
+
+</body>
+</html>
