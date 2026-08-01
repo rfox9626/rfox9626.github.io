@@ -63,8 +63,11 @@
             <li><strong>Consumer Daemon Workers:</strong> Background worker nodes utilizing consumer group isolation to poll and process streaming events concurrently.</li>
             <li><strong>Dual-Store Persistence Engine:</strong> Implements safe transactional writes into PostgreSQL for immutable historical event logging, alongside atomic Redis hash updates for instantaneous operational lookups and real-time node state registries.</li>
         </ul>
-        <p><a href="https://github.com/rfox9626/distributed-event-pipeline" target="_blank">→ View Source Code on GitHub</a></p>
-
+        <p>
+            <a href="https://github.com/rfox9626/distributed-event-pipeline" target="_blank">→ View Source Code on GitHub</a> | 
+            <a href="distributed_event_pipeline_design.pdf" target="_blank">→ View Architecture Design Document (PDF)</a>
+        </p>
+        
         <h3><a href="design.html" class="project-link">High-Concurrency E-Commerce Engine & Fulfillment Pipeline</a></h3>
         <p>Architected an event-driven e-commerce distributed system handling inventory race conditions, decoupled payment processing, and atomic order ledger transactions. <a href="design.html">→ View Technical Design & Architecture</a></p>
         
