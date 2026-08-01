@@ -54,14 +54,26 @@
 
     <section>
         <h2>Portfolio</h2>
+        <h3><a href="https://github.com/rfox9626/distributed-event-pipeline" target="_blank" class="project-link">High-Throughput Distributed Event Pipeline (Independent R&amp;D Project)</a></h3>
+        <p>Designed and built a modular, containerized event-driven ingestion pipeline from the ground up for real-time telemetry processing, dual-write state persistence, and low-latency caching. The architecture decouples data producers from downstream consumers using a Kafka-compatible messaging backbone powered by Redpanda.</p>
+        <p><strong>Infrastructure & Cost Strategy (MSK vs. Containerized Redpanda):</strong> While fully managed streaming services like AWS MSK (Managed Streaming for Apache Kafka) offer reduced operational overhead, they carry substantial baseline financial footprints and rigid infrastructure minimums that heavily penalize independent development workloads and predictable mid-scale projects. To optimize cost without sacrificing performance, the design utilizes a containerized Redpanda engine orchestrated via Docker Compose. This approach delivers lightning-fast, Kafka-compatible wire protocol performance with minimal memory overhead, eliminating unnecessary cloud costs while preserving seamless horizontal scalability.</p>
+        <p><strong>System Components:</strong></p>
+        <ul>
+            <li><strong>Ingestion Producer:</strong> Parses high-volume input telemetry feeds and pushes serialized streaming payloads into the event broker.</li>
+            <li><strong>Consumer Daemon Workers:</strong> Background worker nodes utilizing consumer group isolation to poll and process streaming events concurrently.</li>
+            <li><strong>Dual-Store Persistence Engine:</strong> Implements safe transactional writes into PostgreSQL for immutable historical event logging, alongside atomic Redis hash updates for instantaneous operational lookups and real-time node state registries.</li>
+        </ul>
+        <p><a href="https://github.com/rfox9626/distributed-event-pipeline" target="_blank">→ View Source Code on GitHub</a></p>
+
         <h3><a href="design.html" class="project-link">High-Concurrency E-Commerce Engine & Fulfillment Pipeline</a></h3>
         <p>Architected an event-driven e-commerce distributed system handling inventory race conditions, decoupled payment processing, and atomic order ledger transactions. <a href="design.html">→ View Technical Design & Architecture</a></p>
-        <h3><a href="alarm_and_incident_reporting.html" class="project-link">Enterprise Alarming and Incident Reporting Sytstem</a></h3>
-        <p>This portfolio webpage presents Phase 1 of an enterprise-grade, event-driven serverless alarming and incident-routing system built through human-directed AI collaboration. Designed to eliminate alert fatigue, the architecture leverages an Amazon EventBridge custom bus for content-based filtering, Amazon Bedrock for automated root-cause analysis, and strict least-privilege IAM guardrails with immutable DynamoDB audit logging.<a href="alarm_and_incident_reporting.html">→ View Technical Design & Architecture</a></p>   
+        
+        <h3><a href="alarm_and_incident_reporting.html" class="project-link">Enterprise Alarming and Incident Reporting System</a></h3>
+        <p>This portfolio webpage presents Phase 1 of an enterprise-grade, event-driven serverless alarming and incident-routing system built through human-directed AI collaboration. Designed to eliminate alert fatigue, the architecture leverages an Amazon EventBridge custom bus for content-based filtering, Amazon Bedrock for automated root-cause analysis, and strict least-privilege IAM guardrails with immutable DynamoDB audit logging. <a href="alarm_and_incident_reporting.html">→ View Technical Design & Architecture</a></p>
     </section>
 
     <section>
-        <h2>Selected Case Studies</h2>
+        <h2>Selected Professional Case Studies</h2>
         
         <h3>1. E911 SMPP Stateful Routing Engine &amp; Session Proxy (C &amp; Network Primitives)</h3>
         <p>Architected a high-throughput Short Message Peer-to-Peer (SMPP) routing engine in C to serve as a high-availability stateful proxy between an upstream Kannel application cluster and external emergency service providers (Comtech). Solved a critical network topology constraint: because the external provider operated under strict security architectures that rejected inbound connections, they required all TCP communication channels to be initiated externally and bound to our local site endpoints.</p>
