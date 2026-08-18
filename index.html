@@ -162,6 +162,20 @@
             </p>
         </article>
 
+        <article class="project-card">
+            <h3><a href="https://github.com/rfox9626/serverless-transaction-pipeline" target="_blank" class="project-link">Serverless Banking Transaction Ingestion Pipeline</a></h3>
+            <div class="tags"><span class="tag">Go</span><span class="tag">Terraform</span><span class="tag">AWS Lambda</span><span class="tag">ECS Fargate</span><span class="tag">Secrets Manager</span><span class="tag">MongoDB Atlas</span></div>
+            <p>Built a bank transaction ingestion system in five deliberate phases ΓÇö from a local Go &amp; MongoDB prototype to a secure, event-driven pipeline on AWS: an S3 upload triggers a Lambda function that launches a one-shot ECS Fargate task, with database credentials resolved entirely from AWS Secrets Manager and no hardcoded secrets anywhere in the code or logs.</p>
+            <details class="deep-dive">
+                <summary>Deep dive: closing the secrets gap</summary>
+                <p>A security-focused pass found the MongoDB Atlas connection string sitting directly in the Lambda's source and passed to Fargate as a plaintext environment variable, plus a debug log line printing the full connection string ΓÇö password included ΓÇö to CloudWatch. Both were removed, the exposed credential was rotated in Atlas the same day, and the connection string is now reassembled at container launch from four individual fields pulled out of a single Secrets Manager JSON secret, readable only by the ECS execution role. The full write-up also covers fixing a double-write idempotency bug and removing a standing ECS service in favor of a purely event-driven one-shot task.</p>
+            </details>
+            <p class="links">
+                <a href="https://github.com/rfox9626/serverless-transaction-pipeline" target="_blank">ΓåÆ View Source Code on GitHub</a> |
+                <a href="serverless_transaction_pipeline.html" target="_blank">ΓåÆ Read the Full Build Write-Up</a>
+            </p>
+        </article>
+
         <!--
           TEMPLATE FOR ADDING A NEW PROJECT ΓÇö copy this block, fill it in, and paste it
           before the closing </section> tag above the Case Studies section.
