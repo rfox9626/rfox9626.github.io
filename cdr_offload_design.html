@@ -1,0 +1,675 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CDR Offload Service | Design & Architecture</title>
+<meta name="description" content="System design document for the CDR Offload Service — an async pipeline that validates and idempotently loads telecom call-detail records into MongoDB, with a metrics-instrumented REST API.">
+<link rel="icon" type="image/png" href="favicon.png">
+<link rel="shortcut icon" href="favicon.ico">
+<style>
+  :root {
+    --paper: #EEF1F5;
+    --paper-raised: #FFFFFF;
+    --panel: #E4E9EF;
+    --ink: #1A2432;
+    --ink-soft: #56637C;
+    --ink-faint: #8492A3;
+    --line: #C4CEDA;
+    --line-strong: #9DAAB9;
+    --copper: #B15A2A;
+    --copper-strong: #8C4620;
+    --copper-tint: #F1DCC8;
+    --good: #3E7A5C;
+    --good-tint: #DCEBE3;
+    --warn: #9C7423;
+    --bad: #A5432E;
+    --bad-tint: #F1DCD5;
+    --shadow: 0 1px 2px rgba(26,36,50,0.06), 0 8px 24px -12px rgba(26,36,50,0.18);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --paper: #10151D;
+      --paper-raised: #171E28;
+      --panel: #1A2129;
+      --ink: #E7ECF3;
+      --ink-soft: #A2AEBE;
+      --ink-faint: #67748A;
+      --line: #2B3543;
+      --line-strong: #3B4859;
+      --copper: #E08A4E;
+      --copper-strong: #F0A46C;
+      --copper-tint: #3A2A1E;
+      --good: #5FBB90;
+      --good-tint: #1B2E26;
+      --warn: #D9AE5C;
+      --bad: #E07C63;
+      --bad-tint: #34211D;
+      --shadow: 0 1px 2px rgba(0,0,0,0.4), 0 8px 24px -12px rgba(0,0,0,0.6);
+    }
+  }
+  :root[data-theme="dark"] {
+    --paper: #10151D;
+    --paper-raised: #171E28;
+    --panel: #1A2129;
+    --ink: #E7ECF3;
+    --ink-soft: #A2AEBE;
+    --ink-faint: #67748A;
+    --line: #2B3543;
+    --line-strong: #3B4859;
+    --copper: #E08A4E;
+    --copper-strong: #F0A46C;
+    --copper-tint: #3A2A1E;
+    --good: #5FBB90;
+    --good-tint: #1B2E26;
+    --warn: #D9AE5C;
+    --bad: #E07C63;
+    --bad-tint: #34211D;
+    --shadow: 0 1px 2px rgba(0,0,0,0.4), 0 8px 24px -12px rgba(0,0,0,0.6);
+  }
+
+  * { box-sizing: border-box; }
+  @media (prefers-reduced-motion: reduce) {
+    * { animation: none !important; transition: none !important; }
+  }
+
+  body {
+    background: var(--paper);
+    color: var(--ink);
+    font-family: 'Public Sans', ui-sans-serif, system-ui, -apple-system, sans-serif;
+    font-size: 16px;
+    line-height: 1.6;
+    margin: 0;
+    padding: 0 24px 96px;
+  }
+
+  h1, h2, h3 {
+    font-family: 'Big Shoulders Display', Oswald, 'Arial Narrow', sans-serif;
+    text-wrap: balance;
+    color: var(--ink);
+    margin: 0;
+  }
+
+  .mono {
+    font-family: 'IBM Plex Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+  }
+
+  a { color: var(--copper-strong); }
+  a:focus-visible, button:focus-visible, [tabindex]:focus-visible {
+    outline: 2px solid var(--copper);
+    outline-offset: 2px;
+  }
+
+  .back-link {
+    display: inline-block;
+    max-width: 1040px;
+    margin: 24px auto 0;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 13px;
+  }
+  .back-link-wrap { max-width: 1040px; margin: 0 auto; }
+
+  .page {
+    max-width: 1040px;
+    margin: 0 auto;
+  }
+
+  /* ---------- Header ---------- */
+  .masthead {
+    padding: 32px 0 40px;
+    border-bottom: 1px solid var(--line);
+    margin-bottom: 48px;
+  }
+  .eyebrow {
+    font-size: 12px;
+    font-weight: 500;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--copper-strong);
+    margin-bottom: 18px;
+  }
+  .title {
+    font-size: clamp(40px, 6vw, 68px);
+    font-weight: 800;
+    letter-spacing: -0.01em;
+    line-height: 0.98;
+    text-transform: uppercase;
+  }
+  .subtitle {
+    font-size: 19px;
+    color: var(--ink-soft);
+    max-width: 640px;
+    margin-top: 20px;
+    line-height: 1.55;
+  }
+  .meta-strip {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px 22px;
+    margin-top: 28px;
+    font-size: 12.5px;
+    color: var(--ink-faint);
+  }
+
+  /* ---------- Prose sections ---------- */
+  .prose {
+    max-width: 660px;
+    margin: 0 auto 64px;
+  }
+  .prose p { margin: 0 0 18px; }
+  .prose p:last-child { margin-bottom: 0; }
+
+  .section-tag {
+    display: inline-block;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--copper-strong);
+    background: var(--copper-tint);
+    padding: 4px 10px;
+    border-radius: 3px;
+    margin-bottom: 14px;
+  }
+  h2.section-title {
+    font-size: 30px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: -0.005em;
+    margin-bottom: 22px;
+  }
+  .prose h2.section-title { max-width: 660px; }
+
+  /* ---------- Wide "sheet" panels ---------- */
+  .sheet-wrap { max-width: 1040px; margin: 0 auto 64px; }
+  .sheet {
+    background:
+      repeating-linear-gradient(
+        0deg, transparent, transparent 27px, var(--line) 27px, var(--line) 28px
+      ),
+      repeating-linear-gradient(
+        90deg, transparent, transparent 27px, var(--line) 27px, var(--line) 28px
+      ),
+      var(--panel);
+    background-blend-mode: normal;
+    background-size: 28px 28px, 28px 28px, auto;
+    opacity: 1;
+    border: 1px solid var(--line-strong);
+    border-radius: 6px;
+    padding: 28px;
+    box-shadow: var(--shadow);
+  }
+  .sheet-inner-bg {
+    background: var(--paper-raised);
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    padding: 24px;
+  }
+
+  figure { margin: 0; }
+  figcaption {
+    margin-top: 18px;
+    font-size: 14px;
+    color: var(--ink-soft);
+    max-width: 660px;
+  }
+  .legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 18px;
+    margin-top: 16px;
+    font-size: 12px;
+    color: var(--ink-faint);
+    align-items: center;
+  }
+  .legend-item { display: flex; align-items: center; gap: 7px; }
+  .legend-swatch {
+    width: 14px; height: 14px;
+    border-radius: 2px;
+    border: 1.5px solid var(--ink-faint);
+    background: transparent;
+    flex-shrink: 0;
+  }
+  .legend-swatch.dashed { border-style: dashed; }
+  .legend-swatch.dotted { border-style: dotted; }
+
+  svg text { fill: currentColor; }
+
+  /* ---------- Tables ---------- */
+  .table-wrap { overflow-x: auto; }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14.5px;
+  }
+  th, td {
+    text-align: left;
+    padding: 11px 16px;
+    border-bottom: 1px solid var(--line);
+    vertical-align: top;
+  }
+  th {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    font-weight: 500;
+    border-bottom: 1.5px solid var(--line-strong);
+  }
+  td.mono, td .mono { color: var(--copper-strong); }
+  tr:last-child td { border-bottom: none; }
+  .status-pill {
+    display: inline-block;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    padding: 1px 7px;
+    border-radius: 3px;
+    background: var(--good-tint);
+    color: var(--good);
+  }
+  .status-pill.warn { background: color-mix(in srgb, var(--warn) 18%, transparent); color: var(--warn); }
+  .status-pill.bad { background: var(--bad-tint); color: var(--bad); }
+
+  /* ---------- Decision blocks ---------- */
+  .decision {
+    display: grid;
+    grid-template-columns: 200px 1fr;
+    gap: 24px;
+    padding: 22px 0;
+    border-bottom: 1px solid var(--line);
+  }
+  .decision:last-child { border-bottom: none; }
+  .decision-tag {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    font-weight: 500;
+    letter-spacing: 0.06em;
+    color: var(--copper-strong);
+    padding-top: 2px;
+  }
+  .decision p { margin: 0; color: var(--ink-soft); font-size: 15px; line-height: 1.6; }
+  .decision p strong { color: var(--ink); font-weight: 600; }
+  @media (max-width: 640px) {
+    .decision { grid-template-columns: 1fr; gap: 8px; }
+  }
+
+  /* ---------- Flow list ---------- */
+  .flow-list {
+    counter-reset: flow;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+  .flow-list li {
+    counter-increment: flow;
+    position: relative;
+    padding: 0 0 26px 46px;
+    font-size: 15.5px;
+    color: var(--ink-soft);
+    line-height: 1.6;
+  }
+  .flow-list li:last-child { padding-bottom: 0; }
+  .flow-list li::before {
+    content: counter(flow);
+    position: absolute;
+    left: 0; top: 0;
+    width: 28px; height: 28px;
+    border: 1.5px solid var(--copper);
+    color: var(--copper-strong);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    background: var(--paper);
+  }
+  .flow-list li::after {
+    content: "";
+    position: absolute;
+    left: 13px; top: 30px; bottom: 0;
+    width: 1px;
+    background: var(--line);
+  }
+  .flow-list li:last-child::after { display: none; }
+  .flow-list code, .prose code, td code {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.9em;
+    background: var(--panel);
+    padding: 1px 5px;
+    border-radius: 3px;
+    color: var(--copper-strong);
+  }
+
+  footer {
+    max-width: 1040px;
+    margin: 80px auto 0;
+    padding-top: 24px;
+    border-top: 1px solid var(--line);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    color: var(--ink-faint);
+    letter-spacing: 0.04em;
+  }
+</style>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@600;700;800;900&family=Public+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+</head>
+<body>
+
+<div class="back-link-wrap">
+  <a class="back-link mono" href="index.html">&larr; Back to portfolio</a>
+</div>
+
+<div class="page">
+
+  <header class="masthead">
+    <div class="eyebrow mono">System Design Document &middot; CDR&#8209;OFFLOAD&#8209;01</div>
+    <h1 class="title">CDR Offload<br>Service</h1>
+    <p class="subtitle">An async pipeline that watches a directory for telecom call&#8209;detail records, validates and idempotently loads them into MongoDB, and exposes the result through a metrics&#8209;instrumented REST API.</p>
+    <div class="meta-strip mono">
+      <span>Python 3.11</span>
+      <span>asyncio</span>
+      <span>Pydantic v2</span>
+      <span>PyMongo Async</span>
+      <span>FastAPI</span>
+      <span>Prometheus / Grafana</span>
+      <span>Docker Compose</span>
+    </div>
+  </header>
+
+  <section class="prose">
+    <div class="section-tag">Overview</div>
+    <h2 class="section-title">What this is</h2>
+    <p>A Call Detail Record (CDR) is written by a phone system every time a call completes &mdash; who called whom, when, for how long, and how the call was routed. In a real deployment these arrive as flat CSV files that need to be picked up, validated, and moved into a queryable store without dropping a row or double&#8209;counting one, even when the same file gets reprocessed after a crash.</p>
+    <p>This service does exactly that. It watches an incoming directory, waits for each file to finish being written, parses and validates every row, and upserts the result into MongoDB using the record's own unique call ID as the primary key &mdash; so replaying the same file twice overwrites, it never duplicates. Rows that fail validation are quarantined instead of dropped. The pipeline reports its own health through Prometheus, and a separate FastAPI service exposes the stored records for search, update, and deletion over REST.</p>
+  </section>
+
+  <section class="sheet-wrap">
+    <div class="sheet">
+      <div class="sheet-inner-bg">
+        <figure>
+          <svg viewBox="0 0 1160 800" role="img" aria-label="Architecture diagram: gen_cdrs.py writes CSV files into a bind-mounted incoming directory; a producer polls and debounces them onto a queue; three consumer workers validate each row, upserting valid rows into MongoDB and writing invalid rows to a dead-letter directory; Prometheus scrapes the consumer process's metrics endpoint and Grafana queries Prometheus; a separate FastAPI service queries MongoDB directly and serves an external client, all inside a Docker Compose network boundary.">
+            <defs>
+              <marker id="arrow" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+                <path d="M0,0 L10,5 L0,10 z" fill="currentColor"></path>
+              </marker>
+            </defs>
+
+            <g font-family="IBM Plex Mono, monospace" font-size="13">
+
+              <!-- Docker Compose boundary -->
+              <rect x="20" y="130" width="880" height="630" rx="6" fill="none" stroke="var(--ink-faint)" stroke-width="1.5" stroke-dasharray="2 5" opacity="0.8"></rect>
+              <text x="36" y="152" font-size="11" letter-spacing="0.08em" fill="var(--ink-faint)">DOCKER COMPOSE NETWORK</text>
+
+              <!-- External: generator -->
+              <rect x="40" y="40" width="190" height="56" rx="4" fill="var(--paper)" stroke="var(--ink-faint)" stroke-width="1.5" stroke-dasharray="1 4"></rect>
+              <text x="135" y="63" text-anchor="middle" font-weight="600">gen_cdrs.py</text>
+              <text x="135" y="80" text-anchor="middle" font-size="11" fill="var(--ink-soft)">host script &middot; test data</text>
+
+              <!-- External: client -->
+              <rect x="900" y="40" width="190" height="56" rx="4" fill="var(--paper)" stroke="var(--ink-faint)" stroke-width="1.5" stroke-dasharray="1 4"></rect>
+              <text x="995" y="63" text-anchor="middle" font-weight="600">API client</text>
+              <text x="995" y="80" text-anchor="middle" font-size="11" fill="var(--ink-soft)">curl &middot; Postman</text>
+
+              <!-- Incoming dir -->
+              <rect x="40" y="170" width="190" height="56" rx="4" fill="var(--panel)" stroke="var(--ink-soft)" stroke-width="1.5" stroke-dasharray="5 3"></rect>
+              <text x="135" y="193" text-anchor="middle" font-weight="600">incoming/</text>
+              <text x="135" y="210" text-anchor="middle" font-size="11" fill="var(--ink-soft)">bind mount</text>
+
+              <!-- Producer -->
+              <rect x="40" y="280" width="160" height="56" rx="4" fill="var(--paper-raised)" stroke="var(--ink)" stroke-width="1.5"></rect>
+              <text x="120" y="303" text-anchor="middle" font-weight="600">Producer</text>
+              <text x="120" y="320" text-anchor="middle" font-size="11" fill="var(--ink-soft)">debounce 2s</text>
+
+              <!-- Queue -->
+              <rect x="240" y="280" width="140" height="56" rx="4" fill="var(--paper-raised)" stroke="var(--ink)" stroke-width="1.5"></rect>
+              <text x="310" y="303" text-anchor="middle" font-weight="600">Queue</text>
+              <text x="310" y="320" text-anchor="middle" font-size="11" fill="var(--ink-soft)">asyncio.Queue</text>
+
+              <!-- Consumer pool -->
+              <rect x="420" y="280" width="190" height="56" rx="4" fill="var(--paper-raised)" stroke="var(--ink)" stroke-width="1.5"></rect>
+              <text x="515" y="303" text-anchor="middle" font-weight="600">Consumers &times;3</text>
+              <text x="515" y="320" text-anchor="middle" font-size="11" fill="var(--ink-soft)">cdr_processor.py</text>
+
+              <!-- Dead letter -->
+              <rect x="380" y="420" width="180" height="56" rx="4" fill="var(--bad-tint)" stroke="var(--bad)" stroke-width="1.5" stroke-dasharray="5 3"></rect>
+              <text x="470" y="443" text-anchor="middle" font-weight="600" fill="var(--bad)">dead_letter/</text>
+              <text x="470" y="460" text-anchor="middle" font-size="11" fill="var(--bad)">failed_*.csv</text>
+
+              <!-- MongoDB -->
+              <rect x="620" y="420" width="200" height="70" rx="4" fill="var(--copper-tint)" stroke="var(--copper)" stroke-width="2"></rect>
+              <text x="720" y="448" text-anchor="middle" font-weight="600" fill="var(--copper-strong)">MongoDB</text>
+              <text x="720" y="465" text-anchor="middle" font-size="11" fill="var(--copper-strong)">cdrs &middot; _id = uniqueid</text>
+              <text x="720" y="480" text-anchor="middle" font-size="10.5" fill="var(--copper-strong)">named volume: mongo_data</text>
+
+              <!-- FastAPI -->
+              <rect x="620" y="560" width="200" height="60" rx="4" fill="var(--paper-raised)" stroke="var(--ink)" stroke-width="1.5"></rect>
+              <text x="720" y="585" text-anchor="middle" font-weight="600">FastAPI</text>
+              <text x="720" y="602" text-anchor="middle" font-size="11" fill="var(--ink-soft)">api_data.py &middot; :8080</text>
+
+              <!-- Prometheus -->
+              <rect x="240" y="560" width="170" height="56" rx="4" fill="var(--paper-raised)" stroke="var(--ink)" stroke-width="1.5"></rect>
+              <text x="325" y="583" text-anchor="middle" font-weight="600">Prometheus</text>
+              <text x="325" y="600" text-anchor="middle" font-size="11" fill="var(--ink-soft)">:9090</text>
+
+              <!-- Grafana -->
+              <rect x="240" y="660" width="170" height="56" rx="4" fill="var(--paper-raised)" stroke="var(--ink)" stroke-width="1.5"></rect>
+              <text x="325" y="683" text-anchor="middle" font-weight="600">Grafana</text>
+              <text x="325" y="700" text-anchor="middle" font-size="11" fill="var(--ink-soft)">:3000 dashboards</text>
+
+              <!-- Arrows -->
+              <g stroke="var(--ink-soft)" stroke-width="1.5" fill="none">
+                <!-- generator -> incoming -->
+                <line x1="135" y1="96" x2="135" y2="169" marker-end="url(#arrow)"></line>
+                <!-- incoming -> producer -->
+                <line x1="120" y1="226" x2="120" y2="279" marker-end="url(#arrow)"></line>
+                <!-- producer -> queue -->
+                <line x1="200" y1="308" x2="239" y2="308" marker-end="url(#arrow)"></line>
+                <!-- queue -> consumers -->
+                <line x1="380" y1="308" x2="419" y2="308" marker-end="url(#arrow)"></line>
+                <!-- consumers -> dead letter -->
+                <polyline points="450,336 450,400 470,400 470,419" marker-end="url(#arrow)"></polyline>
+                <!-- prometheus -> consumers (scrape, pull) -->
+                <polyline points="325,559 325,345 515,345 515,337" marker-end="url(#arrow)"></polyline>
+                <!-- grafana -> prometheus (query, pull) -->
+                <line x1="325" y1="659" x2="325" y2="617" marker-end="url(#arrow)"></line>
+                <!-- fastapi -> mongo -->
+                <line x1="720" y1="559" x2="720" y2="491" marker-end="url(#arrow)"></line>
+                <!-- client -> fastapi -->
+                <polyline points="995,96 995,590 821,590" marker-end="url(#arrow)"></polyline>
+              </g>
+              <!-- consumers -> mongo, copper accent (the idempotent write path) -->
+              <polyline points="560,336 560,400 720,400 720,419" fill="none" stroke="var(--copper)" stroke-width="2" marker-end="url(#arrow)"></polyline>
+
+              <!-- Arrow labels -->
+              <g font-size="11" fill="var(--ink-faint)">
+                <text x="145" y="130">writes CSV</text>
+                <text x="128" y="255">poll (os.scandir)</text>
+                <text x="205" y="298">put() @ stable</text>
+                <text x="385" y="298">get() &times;3</text>
+                <text x="240" y="392">invalid &rarr; writerow()</text>
+                <text x="565" y="392" fill="var(--copper-strong)" font-weight="600">valid &rarr; upsert(_id)</text>
+                <text x="280" y="450" text-anchor="middle">scrapes</text>
+                <text x="280" y="463" text-anchor="middle">cdr:8000 / 5s</text>
+                <text x="335" y="638">PromQL</text>
+                <text x="730" y="528">find / update</text>
+                <text x="730" y="541">/ delete</text>
+                <text x="900" y="583">REST /cdrs</text>
+              </g>
+            </g>
+          </svg>
+          <figcaption>A CDR file's path through the system: written to a bind&#8209;mounted directory, debounced onto a queue, validated by three concurrent workers, and branched into either MongoDB or a dead&#8209;letter file. The consumer process's own metrics are pulled by Prometheus; a fully separate FastAPI process reads and writes the same MongoDB collection to serve external clients.</figcaption>
+          <div class="legend">
+            <div class="legend-item"><span class="legend-swatch"></span> Docker container / process</div>
+            <div class="legend-item"><span class="legend-swatch dashed"></span> host directory (bind mount)</div>
+            <div class="legend-item"><span class="legend-swatch dotted"></span> outside Docker Compose</div>
+          </div>
+        </figure>
+      </div>
+    </div>
+  </section>
+
+  <section class="prose">
+    <div class="section-tag">Component Map</div>
+    <h2 class="section-title">Six moving parts</h2>
+  </section>
+  <section class="sheet-wrap">
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>Component</th><th>File</th><th>Responsibility</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>CDR Generator</td><td class="mono">gen_cdrs.py</td><td>Produces realistic Asterisk&#8209;format CDR CSVs for local testing &mdash; not part of the deployed pipeline.</td></tr>
+          <tr><td>Ingestion Pipeline</td><td class="mono">cdr_processor.py</td><td>Producer/consumer asyncio watcher: detects stable files, parses rows, branches valid vs. invalid.</td></tr>
+          <tr><td>Validation Model</td><td class="mono">cdr_record.py</td><td><code>CdrRecord</code> (strict ingest) and <code>CdrUpdate</code> (partial&#8209;update) Pydantic models.</td></tr>
+          <tr><td>Data Access</td><td class="mono">mongo_processor.py</td><td><code>MongoProcessor</code> &mdash; a thin async wrapper over PyMongo's native <code>AsyncMongoClient</code>.</td></tr>
+          <tr><td>Query API</td><td class="mono">api_data.py</td><td>FastAPI service exposing CRUD over the CDR collection via its own lifespan&#8209;managed connection.</td></tr>
+          <tr><td>Storage</td><td class="mono">MongoDB</td><td><code>cdrs</code> collection, keyed by <code>uniqueid</code> as <code>_id</code> for idempotent writes.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="prose">
+    <div class="section-tag">Data Flow</div>
+    <h2 class="section-title">One record's journey</h2>
+    <ol class="flow-list">
+      <li>A CSV file &mdash; from <code>gen_cdrs.py</code>, or a real PBX &mdash; lands in the bind&#8209;mounted <code>incoming/</code> directory.</li>
+      <li>The producer polls the directory every 100&ndash;500ms and tracks each new file's size; once the size hasn't changed for 2 seconds, the file is considered fully written and gets queued.</li>
+      <li>One of three consumer workers pulls the filename off the <code>asyncio.Queue</code> and opens it for reading.</li>
+      <li>Each row is parsed with <code>csv.DictReader</code> and validated against <code>CdrRecord</code> &mdash; type coercion, required fields, and a blank&#8209;to&#8209;None rule for the optional <code>answer</code> timestamp.</li>
+      <li>A row that fails validation is appended to <code>dead_letter/failed_&lt;filename&gt;.csv</code>; a row that passes is upserted into MongoDB with <code>$set</code>, using its <code>uniqueid</code> as <code>_id</code>.</li>
+      <li>Every file processed, row processed, row failed, and upsert duration increments a Prometheus counter or histogram exposed on the consumer process's own <code>:8000/metrics</code>.</li>
+      <li>Prometheus scrapes that endpoint every 5 seconds; Grafana queries Prometheus to render throughput and p50/p95 upsert latency.</li>
+      <li>A separate FastAPI process &mdash; its own MongoDB connection, its own container &mdash; serves <code>POST</code>, <code>GET</code>, <code>PATCH</code>, and <code>DELETE</code> against the same <code>cdrs</code> collection, for anything that needs to search, correct, or remove a record after the fact.</li>
+    </ol>
+  </section>
+
+  <section class="prose">
+    <div class="section-tag">Design Decisions</div>
+    <h2 class="section-title">Why it's built this way</h2>
+  </section>
+  <section class="sheet-wrap">
+    <div class="sheet">
+      <div class="sheet-inner-bg">
+        <div class="decision">
+          <div class="decision-tag">IDEMPOTENCY</div>
+          <p>Using <code>uniqueid</code> as Mongo's <code>_id</code> turns every write into <code>update_one(&hellip;, upsert=True)</code> instead of <code>insert_one</code> &mdash; reprocessing a file after a crash overwrites the same documents instead of duplicating them. <strong>Tradeoff:</strong> uniqueness is only as good as the source system's ID scheme, since there's no server&#8209;generated ObjectId to fall back on.</p>
+        </div>
+        <div class="decision">
+          <div class="decision-tag">FILE&#8209;STABILITY DETECTION</div>
+          <p>A CSV mid&#8209;write looks, for a moment, like a file that's safe to read. The producer tracks each file's size across polls and only enqueues it once the size holds steady for 2 seconds &mdash; a cheap debounce that avoids reading a half&#8209;written row.</p>
+        </div>
+        <div class="decision">
+          <div class="decision-tag">FAIL&#8209;OPEN VALIDATION</div>
+          <p>One malformed row doesn't abort the file. <code>CdrRecord</code> validation failures are caught per&#8209;row, written to a dead&#8209;letter CSV alongside the original header, and the loop continues &mdash; every file is fully drained, either into Mongo or into the dead letter, never left half&#8209;processed.</p>
+        </div>
+        <div class="decision">
+          <div class="decision-tag">OBSERVABILITY IS PER&#8209;PROCESS</div>
+          <p><code>prometheus_client</code>'s registry lives in memory, scoped to one Python process. The watcher and the API run as separate containers, so each exposes its own <code>/metrics</code> rather than assuming a shared registry &mdash; the same reason each service configures its own <code>logging.basicConfig()</code> instead of inheriting one.</p>
+        </div>
+        <div class="decision">
+          <div class="decision-tag">SEPARATE QUERY SERVICE</div>
+          <p>The watcher's job is throughput: drain files, never stop. The API's job is availability: answer a request now. Splitting them into two containers means a slow query from a client can't back up file processing, and a burst of incoming files can't make the API time out.</p>
+        </div>
+        <div class="decision">
+          <div class="decision-tag">HEALTHCHECK&#8209;GATED STARTUP</div>
+          <p>Both <code>cdr</code> and <code>api</code> wait on Mongo's healthcheck (<code>mongosh</code> ping) rather than just its container start &mdash; Mongo's process can be "up" seconds before it's actually ready to accept connections.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="prose">
+    <div class="section-tag">API Reference</div>
+    <h2 class="section-title">api_data.py</h2>
+  </section>
+  <section class="sheet-wrap">
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>Method</th><th>Path</th><th>Status</th><th>Description</th></tr>
+        </thead>
+        <tbody>
+          <tr><td class="mono">POST</td><td class="mono">/cdrs</td><td><span class="status-pill">201</span> <span class="status-pill warn">200</span></td><td>Create or upsert a full record; <code>200</code> if it overwrote an existing <code>uniqueid</code>, <code>201</code> if new.</td></tr>
+          <tr><td class="mono">GET</td><td class="mono">/cdrs</td><td><span class="status-pill">200</span></td><td>Search by optional <code>src</code>, <code>dst</code>, <code>disposition</code> query params; <code>limit</code> caps result size.</td></tr>
+          <tr><td class="mono">GET</td><td class="mono">/cdrs/&#123;cdr_id&#125;</td><td><span class="status-pill">200</span> <span class="status-pill bad">404</span></td><td>Fetch a single record by its <code>uniqueid</code>.</td></tr>
+          <tr><td class="mono">PATCH</td><td class="mono">/cdrs/&#123;cdr_id&#125;</td><td><span class="status-pill">200</span> <span class="status-pill bad">404</span></td><td>Partial update &mdash; only fields present in the body are touched (<code>CdrUpdate</code>, <code>exclude_unset=True</code>).</td></tr>
+          <tr><td class="mono">DELETE</td><td class="mono">/cdrs/&#123;cdr_id&#125;</td><td><span class="status-pill">204</span> <span class="status-pill bad">404</span></td><td>Remove a record by id.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="prose">
+    <div class="section-tag">Deployment</div>
+    <h2 class="section-title">docker-compose.yml</h2>
+  </section>
+  <section class="sheet-wrap">
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>Service</th><th>Image / Build</th><th>Port</th><th>Volume</th></tr>
+        </thead>
+        <tbody>
+          <tr><td class="mono">mongo</td><td class="mono">mongo:latest</td><td class="mono">27017:27017</td><td class="mono">mongo_data (named)</td></tr>
+          <tr><td class="mono">cdr</td><td class="mono">build .</td><td class="mono">12000:8000</td><td class="mono">/var/tmp/cdr_offload (bind)</td></tr>
+          <tr><td class="mono">api</td><td class="mono">build . &middot; uvicorn</td><td class="mono">8080:8080</td><td class="mono">&mdash;</td></tr>
+          <tr><td class="mono">prometheus</td><td class="mono">prom/prometheus:latest</td><td class="mono">9090:9090</td><td class="mono">./prometheus.yml (bind)</td></tr>
+          <tr><td class="mono">grafana</td><td class="mono">grafana/grafana:latest</td><td class="mono">3000:3000</td><td class="mono">&mdash;</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="prose">
+    <div class="section-tag">Local Setup</div>
+    <h2 class="section-title">Running a script outside Docker</h2>
+    <p><code>docker compose up --build</code> handles dependency installation inside the container automatically. Running a file directly on the host &mdash; for quick iteration or debugging &mdash; requires a virtual environment set up first, on a fresh checkout:</p>
+    <ol class="flow-list">
+      <li><code>python3 -m venv venv</code> &mdash; create an isolated environment in <code>venv/</code>.</li>
+      <li><code>source venv/bin/activate</code> (<code>venv\Scripts\activate</code> on Windows) &mdash; point <code>python</code> and <code>pip</code> at it.</li>
+      <li><code>pip install -r requirements.txt</code> &mdash; install the pinned dependencies into it.</li>
+    </ol>
+    <p><code>gen_cdrs.py</code> is the only script with no external dependency &mdash; it just writes CSVs &mdash; so it's the fastest way to sanity&#8209;check a fresh <code>venv</code>. <code>cdr_processor.py</code>, <code>mongo_processor.py</code>, and <code>api_data.py</code> all expect a reachable MongoDB, so running them standalone also means a local Mongo instance &mdash; via Docker or otherwise &mdash; needs to already be up.</p>
+  </section>
+
+  <section class="prose">
+    <div class="section-tag">Metrics</div>
+    <h2 class="section-title">What's on <span class="mono" style="text-transform:none; font-size:0.6em; vertical-align:2px;">/metrics</span></h2>
+  </section>
+  <section class="sheet-wrap">
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>Name</th><th>Type</th><th>Meaning</th></tr>
+        </thead>
+        <tbody>
+          <tr><td class="mono">cdr_files_processed_total</td><td>Counter</td><td>Files fully drained by the pipeline.</td></tr>
+          <tr><td class="mono">cdr_rows_processed_total</td><td>Counter</td><td>Rows successfully upserted into Mongo.</td></tr>
+          <tr><td class="mono">cdr_rows_failed_total</td><td>Counter</td><td>Rows dead&#8209;lettered on validation failure.</td></tr>
+          <tr><td class="mono">cdr_upsert_duration_seconds</td><td>Histogram</td><td>Per&#8209;row Mongo upsert latency &mdash; p50/p95 rendered in Grafana.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="prose" style="margin-bottom: 0;">
+    <div class="section-tag">Roadmap</div>
+    <h2 class="section-title">Not done yet</h2>
+    <p>The deployment is currently expressed only as Docker Compose; Kubernetes manifests and Terraform are the next infrastructure layer.</p>
+    <p>No CI pipeline yet &mdash; tests and image builds still run by hand.</p>
+  </section>
+
+  <footer>
+    CDR OFFLOAD SERVICE &middot; SOLO BACKEND PORTFOLIO PROJECT &middot; 2026
+  </footer>
+
+</div>
+
+</body>
+</html>

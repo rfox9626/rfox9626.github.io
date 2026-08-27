@@ -5,11 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Richard Fox | Software Engineer</title>
     <meta name="description" content="Richard Fox — Senior Software Engineer specializing in backend & systems architecture: distributed pipelines, high-throughput infrastructure, and cloud-native migrations.">
-
     <!-- Favicon -->
     <link rel="icon" type="image/png" href="favicon.png">
     <link rel="shortcut icon" href="favicon.ico">
-
     <!-- Open Graph / link preview -->
     <meta property="og:type" content="website">
     <meta property="og:title" content="Richard Fox | Senior Software Engineer">
@@ -20,7 +18,6 @@
     <meta name="twitter:title" content="Richard Fox | Senior Software Engineer">
     <meta name="twitter:description" content="Backend & systems architecture — distributed pipelines, high-throughput infrastructure, and cloud-native migrations.">
     <meta name="twitter:image" content="https://rfox9626.github.io/og-image.png">
-
     <style>
         :root {
             --accent: #1d5fc4;
@@ -42,7 +39,6 @@
         a:hover { text-decoration: underline; }
         ul { padding-left: 20px; }
         li { margin-bottom: 10px; }
-
         /* Sticky nav */
         .site-nav { position: sticky; top: 0; z-index: 10; background: rgba(255,255,255,0.96); backdrop-filter: blur(4px); border-bottom: 1px solid var(--border); border-top: 3px solid var(--accent); }
         .site-nav ul { list-style: none; display: flex; flex-wrap: nowrap; overflow-x: auto; gap: 4px 18px; margin: 0 auto; padding: 12px 20px; max-width: 800px; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
@@ -50,27 +46,22 @@
         .site-nav li { flex-shrink: 0; }
         .site-nav a { font-size: 0.92em; font-weight: 600; color: #555; }
         .site-nav a:hover { color: var(--accent); text-decoration: none; }
-
         /* Section intros */
         .section-intro { color: #666; margin-top: -6px; }
-
         /* Tag pills */
         .tags { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0 10px; }
         .tag { background: var(--tag-bg); color: var(--tag-text); font-size: 0.78em; font-weight: 600; padding: 3px 9px; border-radius: 999px; white-space: nowrap; }
         .tag-metric { background: var(--accent); color: #fff; }
-
         /* Project cards */
         .project-card { padding: 20px 0 20px 18px; border-bottom: 1px solid var(--border); border-left: 3px solid var(--accent-soft); transition: border-color 0.15s ease; }
         .project-card:hover { border-left-color: var(--accent); }
         .project-card:last-child { border-bottom: none; }
         .project-card h3 { margin-bottom: 4px; }
         .project-card .links { margin-top: 10px; font-size: 0.95em; }
-
         /* Deep-dive collapsible within a project */
         details.deep-dive { margin: 10px 0; border: 1px solid var(--border); border-radius: 6px; padding: 4px 14px; }
         details.deep-dive summary { cursor: pointer; font-weight: 600; padding: 8px 0; color: var(--accent); }
         details.deep-dive[open] summary { border-bottom: 1px solid var(--border); margin-bottom: 8px; }
-
         /* Case study collapsibles */
         details.case-study { border: 1px solid var(--border); border-left: 3px solid var(--accent-soft); border-radius: 6px; padding: 12px 16px; margin-bottom: 10px; transition: border-left-color 0.15s ease; }
         details.case-study:hover { border-left-color: var(--accent); }
@@ -83,7 +74,6 @@
     </style>
 </head>
 <body>
-
     <nav class="site-nav">
         <ul>
             <li><a href="#about">About</a></li>
@@ -93,7 +83,6 @@
             <li><a href="#case-studies">Case Studies</a></li>
         </ul>
     </nav>
-
     <header>
         <div class="avatar" aria-hidden="true">RF</div>
         <div>
@@ -102,13 +91,11 @@
             <p><a href="mailto:rfox9626@gmail.com">rfox9626@gmail.com</a> | <a href="https://linkedin.com/in/richard-fox-06839b13b/">LinkedIn</a></p>
         </div>
     </header>
-
     <section id="about">
         <h2>About</h2>
         <p>I am a systems-focused backend architect with a Master’s degree in Computer Science and decades of experience building high-throughput, low-latency distributed infrastructure. My expertise lies at the intersection of robust systems engineering—designing multi-process Linux daemons, custom replication engines, and high-concurrency event pipelines—and pragmatic cloud architecture. I specialize in untangling legacy bottlenecks, optimizing data concurrency, and migrating critical systems to modern, cloud-native frameworks like Go and AWS.</p>
         <p>I treat modern AI development tools as an engineering force multiplier. By leveraging LLMs to rapidly navigate complex codebases and streamline boilerplate architecture under strict manual verification guardrails, I significantly accelerate delivery speed while maintaining absolute execution safety. I thrive on small, fast-moving teams where deep technical credibility, hands-on implementation, and active mentorship drive measurable business outcomes.</p>
     </section>
-
     <section id="skills">
         <h2>Technical Foundation</h2>
         <div class="skills">
@@ -117,7 +104,6 @@
             <div><strong>Leadership:</strong> Architectural Strategy, Mentorship, Agile</div>
         </div>
     </section>
-
     <section id="ai-dev">
         <h2>AI-Driven Development &amp; Acceleration</h2>
         <p>Leveraging generative AI and LLMs as a force multiplier to accelerate system comprehension, eliminate boilerplate friction, and augment deep diagnostic troubleshooting—while maintaining rigorous manual verification guardrails.</p>
@@ -128,11 +114,9 @@
             <li><strong>Rigorous Quality Control &amp; Guardrails:</strong> Maintaining absolute domain oversight. Recognizing that models can generate syntactically plausible but contextually flawed architecture, every AI output undergoes strict manual verification, deep code review, and sandboxed testing before production integration.</li>
         </ul>
     </section>
-
     <section id="portfolio">
         <h2>Portfolio</h2>
         <p class="section-intro">Independent projects I designed and built end-to-end to demonstrate hands-on systems and backend engineering — source code and design docs linked for each.</p>
-
         <article class="project-card">
             <h3><a href="https://github.com/rfox9626/distributed-event-pipeline" target="_blank" class="project-link">High-Throughput Distributed Event Pipeline</a></h3>
             <div class="tags"><span class="tag">Redpanda / Kafka</span><span class="tag">PostgreSQL</span><span class="tag">Redis</span><span class="tag">Docker</span></div>
@@ -152,14 +136,12 @@
                 <a href="distributed_pipeline_architecture.pdf" target="_blank">→ View Architecture Design Document (PDF)</a>
             </p>
         </article>
-
         <article class="project-card">
             <h3><a href="design.html" class="project-link">High-Concurrency E-Commerce Engine & Fulfillment Pipeline</a></h3>
             <div class="tags"><span class="tag">Event-Driven</span><span class="tag">Distributed Systems</span></div>
             <p>Architected an event-driven e-commerce distributed system handling inventory race conditions, decoupled payment processing, and atomic order ledger transactions.</p>
             <p class="links"><a href="design.html">→ View Technical Design & Architecture</a></p>
         </article>
-
         <article class="project-card">
             <h3><a href="alarm_and_incident_reporting.html" class="project-link">Enterprise Alarming and Incident Reporting System</a></h3>
             <div class="tags"><span class="tag">AWS EventBridge</span><span class="tag">Bedrock</span><span class="tag">DynamoDB</span><span class="tag">Serverless</span></div>
@@ -169,7 +151,19 @@
                 <a href="Alarm_System_Portfolio_Design_Document_v3.pdf" target="_blank">→ View Architecture Design Document (PDF)</a>
             </p>
         </article>
-
+        <article class="project-card">
+            <h3><a href="https://github.com/rfox9626/CDR" target="_blank" class="project-link">Async CDR Offload & Idempotent Ingestion Pipeline</a></h3>
+            <div class="tags"><span class="tag">Python / asyncio</span><span class="tag">MongoDB</span><span class="tag">FastAPI</span><span class="tag">Prometheus / Grafana</span><span class="tag">Docker</span></div>
+            <p>Built an asynchronous producer/consumer pipeline that watches a directory for telecom call-detail records (CDRs), validates every row, and idempotently upserts it into MongoDB using the record's own unique call ID — so replaying a file after a crash never double-counts. A separate FastAPI service exposes the same collection for search, update, and deletion, while Prometheus and Grafana track throughput and upsert latency end to end.</p>
+            <details class="deep-dive">
+                <summary>Deep dive: idempotent writes without a database-generated ID</summary>
+                <p>MongoDB's default <code>_id</code> is a server-generated ObjectId, but replaying the same CDR file after a crash needs every restart to land on the exact same document identity, not a new one each time. The pipeline uses the record's own <code>uniqueid</code> — assigned upstream by the phone system — as <code>_id</code> directly, turning every write into <code>update_one(..., upsert=True)</code> instead of <code>insert_one</code>. Reprocessing a file overwrites the same documents instead of duplicating them, at the cost of trusting the source system's ID scheme rather than falling back on a server-generated guarantee. A companion debounce watches each incoming file's size across polls and only enqueues it once the size holds steady for two seconds, so a file caught mid-write is never read as if it were complete.</p>
+            </details>
+            <p class="links">
+                <a href="https://github.com/rfox9626/CDR" target="_blank">→ View Source Code on GitHub</a> |
+                <a href="cdr_offload_design.html" target="_blank">→ View Technical Design & Architecture</a>
+            </p>
+        </article>
         <article class="project-card">
             <h3><span class="project-link">Database Offload to MongoDB via Redis Cache</span></h3>
             <div class="tags"><span class="tag">Redis</span><span class="tag">MongoDB</span><span class="tag">Docker</span></div>
@@ -179,7 +173,6 @@
                 <a href="mongo_redis_offload_architecture_design.pdf" target="_blank">→ View Architecture Design Document (PDF)</a>
             </p>
         </article>
-
         <article class="project-card">
             <h3><span class="project-link">Real-Time Kafka & Redis Data Pipeline</span></h3>
             <div class="tags"><span class="tag">Redpanda / Kafka</span><span class="tag">PostgreSQL</span><span class="tag">Redis</span><span class="tag">Docker</span></div>
@@ -189,7 +182,6 @@
                 <a href="Kafka-Implementation.mp4" target="_blank">→ View Architecture Design</a>
             </p>
         </article>
-
         <article class="project-card">
             <h3><a href="https://github.com/rfox9626/serverless-transaction-pipeline" target="_blank" class="project-link">Serverless Banking Transaction Ingestion Pipeline</a></h3>
             <div class="tags"><span class="tag">Go</span><span class="tag">Terraform</span><span class="tag">AWS Lambda</span><span class="tag">ECS Fargate</span><span class="tag">Secrets Manager</span><span class="tag">MongoDB Atlas</span></div>
@@ -203,11 +195,9 @@
                 <a href="serverless_transaction_pipeline.html" target="_blank">→ Read the Full Build Write-Up</a>
             </p>
         </article>
-
         <!--
           TEMPLATE FOR ADDING A NEW PROJECT — copy this block, fill it in, and paste it
           before the closing </section> tag above the Case Studies section.
-
         <article class="project-card">
             <h3><a href="REPO_URL" target="_blank" class="project-link">Project Title</a></h3>
             <div class="tags"><span class="tag">Tech</span><span class="tag">Tech</span></div>
@@ -222,76 +212,61 @@
             </p>
         </article>
         -->
-
     </section>
-
     <section id="case-studies">
         <h2>Selected Professional Case Studies</h2>
         <p class="section-intro">Detailed narratives from prior roles. Click a title to expand.</p>
-
         <details class="case-study">
             <summary><span class="cs-title">1. E911 SMPP Stateful Routing Engine &amp; Session Proxy</span><div class="tags"><span class="tag">C</span><span class="tag">Network Primitives</span></div></summary>
             <p>Architected a high-throughput Short Message Peer-to-Peer (SMPP) routing engine in C to serve as a high-availability stateful proxy between an upstream Kannel application cluster and external emergency service providers (Comtech). Solved a critical network topology constraint: because the external provider operated under strict security architectures that rejected inbound connections, they required all TCP communication channels to be initiated externally and bound to our local site endpoints.</p>
             <p>To bridge this gap, engineered a low-latency routing daemon that managed persistent, pre-established upstream transceiver binds. The engine safely decoupled the Kannel processes, intercepted outbound transaction payloads, mapped them to active connection pools, and reverse-routed inbound delivery notifications back to the correct originating backend worker nodes. Leveraged non-blocking socket I/O and POSIX concurrency mechanisms to ensure deterministic, sub-millisecond message delivery paths under highly volatile, mission-critical E911 operational loads.</p>
         </details>
-
         <details class="case-study">
             <summary><span class="cs-title">2. Proprietary Peer-to-Peer Geo-Replication System</span><div class="tags"><span class="tag">Database Replication</span></div></summary>
             <p>Architected a proprietary, bi-directional peer-to-peer replication engine to synchronize account data and system states in real time across distributed databases. To respect strict relational foreign key constraints, engineered custom operational ordering logic for <code>INSERT</code>, <code>UPDATE</code>, and <code>DELETE</code> routines, preventing cascading constraint violations and deadlocks. Built the sync pipeline to consistently handle a sustained real-time modifications of 750/accounts per minute.</p>
         </details>
-
         <details class="case-study">
             <summary><span class="cs-title">3. Cross-System Session Correlation Engine &amp; Performance Migration</span><div class="tags"><span class="tag">Ruby → Go</span><span class="tag">Redis</span><span class="tag">Kafka</span></div></summary>
             <p>Architected a high-performance distributed session tracking engine—originally developed in Ruby as the core platform standard—to correlate disparate inbound and outbound multimedia messages (MMS) across global operating regions (e.g., US and Europe). When a message is captured in one region, the system extracts metadata routing pairs, enterprise IDs, and payload checksums, streaming the events to a globally shared Kafka topic.</p>
             <p>To optimize infrastructure limits and proactively insulate the primary PostgreSQL database from high-volume transaction write bottlenecks, I re-engineered the ingestion layer to buffer data directly into a low-latency Redis queue instead of executing direct database table writes. Furthermore, to leverage advanced performance fixes and robust cluster handling inside newer Kafka library toolchains, I spearheaded the technical migration porting the entire system from Ruby to Go. This structural pivot dramatically reduced the database I/O footprint, slashed execution latency bounds, and delivered a highly resilient, concurrent messaging layer across telecom zones.</p>
         </details>
-
         <details class="case-study">
             <summary><span class="cs-title">4. High-Scale Bare-Metal Database Migration Infrastructure</span><div class="tags"><span class="tag tag-metric">5M+ Subscribers</span><span class="tag tag-metric">Zero-Downtime</span></div></summary>
             <p>Orchestrated the large-scale, zero-downtime database migration of core production environments to provision and seed five new high-performance bare-metal server nodes. Successfully planned and executed the transfer of a massive data footprint consisting of over 5 million active subscriber profiles and more than 10 million historical messaging records across distributed relational schemas.</p>
             <p>Developed rigorous automated data validation, checksum cross-checking, and state-verification scripts to ensure absolute schema integrity, preventing transactional data loss or record corruption during high-volume cutover windows while maintaining continuous system availability.</p>
         </details>
-
         <details class="case-study">
             <summary><span class="cs-title">5. High-Throughput Linux System Daemon &amp; Request Scheduler</span><div class="tags"><span class="tag">C</span><span class="tag">IPC</span></div></summary>
             <p>Architected a highly scalable, multi-process Linux daemon framework in C designed to orchestrate and dispatch immediate and deferred tasks across local and remote distributed nodes. Engineered an event-driven core utilizing a combination of SysV Message Queues and POSIX shared memory for low-latency, high-throughput Inter-Process Communication (IPC). Built a dedicated, non-blocking background runner to poll and track deferred request lifecycles persisted in PostgreSQL. To ensure future extensibility, designed a modular plugin architecture allowing developers to drop in new, compiled request-handling libraries using standard code templates and configuration hot-reloading.</p>
         </details>
-
         <details class="case-study">
             <summary><span class="cs-title">6. High-Scale Data Ingestion Migration &amp; AI-Assisted Porting</span><div class="tags"><span class="tag">Ruby → Go</span><span class="tag">C</span><span class="tag">Kafka</span></div></summary>
             <p>Engineered an end-to-end data ingestion engine in Ruby to process high-volume assets from cloud object storage (S3). The service streamed binary payloads to high-performance Network File Systems (NFS), generated tracked transaction rows across relational database tables, and synthesized Call Detail Records (CDRs) for downstream analytical consumption. Because the deployment environment operated under strict security air-gapping with zero public egress, I isolated the compilation toolchain, precompiled the underlying <code>librdkafka</code> C source library locally, and reverse-engineered the Ruby gem wrapper to package the static binaries locally—bypassing automated deployment blockades while maintaining security compliance.</p>
             <p>Over time, maintaining the legacy environment exposed architectural limits. The underlying server OS and aging Ruby runtime versions blocked critical upstream <code>librdkafka</code> security patches and performance fixes from being compiled. Rather than continuously patching a constrained runtime environment, I drove the strategic decision to migrate the pipeline to an independent, cloud-native architecture optimized for highly concurrent execution. I spearheaded the comprehensive porting of the entire processing pipeline from Ruby to Go, leveraging the highly resilient <code>Sarama</code> framework for Kafka orchestration. I heavily utilized AI-assisted development workflows to rapidly translate business logic, generate idiomatic Go struct interfaces, and bootstrap robust validation testing suites. By acting as the strict manual verification guardrail, I audited all AI-generated outputs for memory management, type safety, and data consistency.</p>
             <p>The migration yielded a compiled, single-binary Go service that completely eliminated the legacy OS/C-dependency compilation footprint, dramatically slashed CPU/memory utilization, and established a scalable, low-latency data consumer capable of processing millions of records with near-zero runtime maintenance.</p>
         </details>
-
         <details class="case-study">
             <summary><span class="cs-title">7. Secure, High-Performance Internal REST API Suite</span><div class="tags"><span class="tag">Go</span><span class="tag">Ruby on Rails</span></div></summary>
             <p>Engineered a secure, production-grade suite of internal REST APIs designed to serve as the core transactional backbone for high-volume telecom operations. Implemented strict authorization primitives and token-based validation layer architectures to safeguard sensitive business logic pipelines, including real-time account data-drift tracking and cross-platform synchronization state management.</p>
             <p>To handle heavy payload delivery under high concurrent load, optimized the data transport layers for high-performance retrieval of large-scale binary audio streams and multimedia message (MMS) assets. Furthermore, designed the automated reporting engines to aggregate and serialize deep Call Detail Record (CDR) datasets without compromising endpoint responsiveness, utilizing advanced database indexing schemas, connection pooling strategies, and structured memory caching layers to maintain low p99 latency bounds.</p>
         </details>
-
         <details class="case-study">
             <summary><span class="cs-title">8. PostgreSQL Stored Procedures &amp; Dynamic Replication Infrastructure</span><div class="tags"><span class="tag">PostgreSQL</span></div></summary>
             <p>Authored and refactored highly optimized PostgreSQL stored procedures and complex database views to support evolving schema architectures, cleanly extending transactional data pipelines to ingest and expose newly introduced data fields. Engineered automated DDL routines to dynamically provision partition child tables at runtime, significantly isolating historical data footprints. Designed and applied custom procedural replication triggers to synchronize state modifications in real time, guaranteeing consistent high-availability event hooks across distributed reporting nodes.</p>
         </details>
-
         <details class="case-study">
             <summary><span class="cs-title">9. Configurable Enterprise Asset Offload Engine</span><div class="tags"><span class="tag">SFTP</span><span class="tag">SMTP</span></div></summary>
             <p>Architected a highly customized, table-driven data offload system designed to reliably packages and transfer automated enterprise metrics and call recording files to distinct customer endpoints. Engineered a modular delivery pipeline supporting secure multi-protocol transports—including SFTP channels and encrypted SMTP streams. Built the system around a flexible configuration engine, allowing individual clients to dictate distinct payload schedules, directory schemas, and retry policies without necessitating code deployment modifications.</p>
         </details>
-
         <details class="case-study">
             <summary><span class="cs-title">10. High-Performance SQL Query Optimization &amp; Transaction Performance Tuning</span><div class="tags"><span class="tag">SQL</span><span class="tag">PostgreSQL</span></div></summary>
             <p>Analyzed and refactored bottlenecked database queries to drastically accelerate long-running transactional workloads across high-volume production tables. Identified and eliminated blocking lock behaviors, optimized deep relational join execution plans, and restructured index boundaries to mitigate transaction holding times. These structural optimizations prevented table bloat, enhanced database connection concurrency limits, and successfully protected the transactional layer against p99 latency spikes during heavy read/write concurrency.</p>
         </details>
-
         <details class="case-study">
             <summary><span class="cs-title">11. AWS S3 Asset Lifecycle API &amp; Microservice Redesign</span><div class="tags"><span class="tag">Python</span><span class="tag">AWS SDK</span></div></summary>
             <p>Engineered a programmatic asset management API utilizing the AWS SDK to handle cloud object storage lifecycles and secure temporary media purging. While initial requirements proposed deploying an ephemeral AWS Lambda function triggered via Kafka queues to process file deletions, I proactively redesigned the system into a dedicated Python service. This architectural pivot eliminated serverless cold-start latencies, bypassed strict Lambda execution timeouts when handling bulk asset sweeps, and drastically reduced costs by maintaining long-lived, optimized connection pools directly to the storage layers.</p>
             <p>The resulting microservice leverages token-based authentication and non-blocking asynchronous routines to efficiently track, validate, and execute automated cleanup operations on massive media storage volumes without impacting upstream business logic.</p>
         </details>
-
     </section>
-
 </body>
 </html>
