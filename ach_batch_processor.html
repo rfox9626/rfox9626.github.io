@@ -1,0 +1,806 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ACH Batch Processor · Design Document · Richard Fox</title>
+<meta name="description" content="Design document for an ACH/NACHA receiving-bank batch processor built with Django, Celery, PostgreSQL and Redis.">
+<link rel="icon" href="favicon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#070b16; --bg2:#0c1324; --panel:#0f1830; --panel2:#132042; --line:#1f2d52;
+  --text:#e6ecff; --muted:#93a1c6; --dim:#5d6b92;
+  --teal:#2dd4bf; --teal2:#0ea5a0; --violet:#8b5cf6; --amber:#f5b041; --rose:#fb7185; --green:#4ade80; --blue:#60a5fa;
+  --mono:'JetBrains Mono',ui-monospace,Menlo,Consolas,monospace;
+  --sans:'Inter',system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+  --r:14px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--text);font-family:var(--sans);line-height:1.65;font-size:16px;overflow-x:hidden}
+a{color:var(--teal);text-decoration:none}
+a:hover{text-decoration:underline}
+code,.mono{font-family:var(--mono);font-size:.88em}
+code{background:#16223f;border:1px solid var(--line);padding:.08em .4em;border-radius:6px;color:#c7d2fe}
+
+/* ---------- background grid + glow ---------- */
+.bg-grid{position:fixed;inset:0;z-index:-2;
+  background-image:linear-gradient(rgba(96,165,250,.06) 1px,transparent 1px),linear-gradient(90deg,rgba(96,165,250,.06) 1px,transparent 1px);
+  background-size:44px 44px;mask-image:radial-gradient(ellipse at 50% 0%,#000 30%,transparent 75%)}
+.bg-glow{position:fixed;z-index:-1;width:900px;height:900px;border-radius:50%;filter:blur(120px);opacity:.22;pointer-events:none}
+.bg-glow.a{background:var(--violet);top:-420px;left:-260px}
+.bg-glow.b{background:var(--teal);top:-380px;right:-320px}
+
+/* ---------- nav ---------- */
+nav{position:sticky;top:0;z-index:50;backdrop-filter:blur(14px);background:rgba(7,11,22,.72);border-bottom:1px solid var(--line)}
+nav .inner{max-width:1180px;margin:0 auto;display:flex;align-items:center;gap:22px;padding:12px 24px}
+nav .brand{font-weight:700;letter-spacing:.2px;color:var(--text);display:flex;align-items:center;gap:10px}
+nav .brand .dot{width:9px;height:9px;border-radius:50%;background:var(--teal);box-shadow:0 0 12px var(--teal)}
+nav .links{display:flex;gap:18px;margin-left:auto;flex-wrap:wrap}
+nav .links a{color:var(--muted);font-size:.86rem;font-weight:500}
+nav .links a:hover,nav .links a.active{color:var(--text);text-decoration:none}
+#progress{position:absolute;left:0;bottom:-1px;height:2px;width:0;background:linear-gradient(90deg,var(--violet),var(--teal))}
+
+/* ---------- layout ---------- */
+main{max-width:1180px;margin:0 auto;padding:0 24px 120px}
+section{padding:88px 0 0}
+.eyebrow{font-family:var(--mono);font-size:.78rem;letter-spacing:.18em;text-transform:uppercase;color:var(--teal);margin-bottom:10px}
+h1{font-size:clamp(2.4rem,6vw,4.4rem);line-height:1.05;font-weight:800;letter-spacing:-.03em}
+h2{font-size:clamp(1.6rem,3vw,2.3rem);line-height:1.15;font-weight:700;letter-spacing:-.02em;margin-bottom:14px}
+h3{font-size:1.12rem;font-weight:650;margin-bottom:8px}
+p.lead{font-size:1.12rem;color:var(--muted);max-width:760px}
+.grad{background:linear-gradient(90deg,#c4b5fd,var(--teal) 60%,#67e8f9);-webkit-background-clip:text;background-clip:text;color:transparent}
+.muted{color:var(--muted)}
+.grid{display:grid;gap:18px}
+.g2{grid-template-columns:repeat(2,1fr)} .g3{grid-template-columns:repeat(3,1fr)} .g4{grid-template-columns:repeat(4,1fr)}
+@media(max-width:900px){.g2,.g3,.g4{grid-template-columns:1fr}}
+.card{background:linear-gradient(180deg,var(--panel),var(--bg2));border:1px solid var(--line);border-radius:var(--r);padding:22px;position:relative;overflow:hidden}
+.card:hover{border-color:#2c3f72}
+.card .tag{display:inline-block;font-family:var(--mono);font-size:.7rem;padding:2px 8px;border-radius:999px;border:1px solid var(--line);color:var(--muted);margin-bottom:10px}
+.card p{color:var(--muted);font-size:.95rem}
+.card ul{margin:8px 0 0 18px;color:var(--muted);font-size:.93rem}
+.card li{margin:3px 0}
+
+/* ---------- hero ---------- */
+.hero{padding:92px 0 40px;display:grid;grid-template-columns:1.15fr .85fr;gap:40px;align-items:center}
+@media(max-width:980px){.hero{grid-template-columns:1fr}}
+.hero .sub{font-size:1.2rem;color:var(--muted);margin:18px 0 26px;max-width:640px}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{font-family:var(--mono);font-size:.76rem;padding:6px 11px;border-radius:999px;border:1px solid var(--line);background:rgba(19,32,66,.6);color:#cbd5ff}
+.chip b{color:var(--teal);font-weight:500}
+.meta{display:flex;gap:26px;margin-top:28px;flex-wrap:wrap}
+.meta div{font-size:.82rem;color:var(--dim)} .meta strong{display:block;color:var(--text);font-size:.95rem;font-weight:600}
+.btns{display:flex;gap:12px;margin-top:26px;flex-wrap:wrap}
+.btn{display:inline-flex;align-items:center;gap:8px;padding:11px 18px;border-radius:10px;font-weight:600;font-size:.92rem;border:1px solid var(--line);color:var(--text);background:var(--panel)}
+.btn.primary{background:linear-gradient(135deg,var(--violet),var(--teal2));border:0}
+.btn:hover{text-decoration:none;filter:brightness(1.12)}
+
+/* terminal */
+.term{background:#050812;border:1px solid var(--line);border-radius:var(--r);box-shadow:0 30px 80px -30px rgba(45,212,191,.35);overflow:hidden}
+.term .bar{display:flex;gap:7px;padding:11px 14px;border-bottom:1px solid var(--line);background:#0a1020}
+.term .bar i{width:11px;height:11px;border-radius:50%;background:#2a3557} .term .bar i:nth-child(1){background:#f87171} .term .bar i:nth-child(2){background:#fbbf24} .term .bar i:nth-child(3){background:#34d399}
+.term .bar span{margin-left:10px;font-family:var(--mono);font-size:.72rem;color:var(--dim)}
+.term pre{font-family:var(--mono);font-size:.76rem;line-height:1.75;padding:16px 18px;min-height:300px;color:#a5b4fc;white-space:pre-wrap}
+.term .ok{color:var(--green)} .term .w{color:var(--amber)} .term .t{color:var(--teal)} .term .d{color:var(--dim)}
+.cursor{display:inline-block;width:8px;height:15px;background:var(--teal);vertical-align:-2px;animation:blink 1s steps(1) infinite}
+@keyframes blink{50%{opacity:0}}
+
+/* stats */
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-top:46px}
+@media(max-width:900px){.stats{grid-template-columns:repeat(2,1fr)}}
+.stat{border:1px solid var(--line);border-radius:var(--r);padding:18px;background:rgba(15,24,48,.6)}
+.stat .n{font-size:2rem;font-weight:800;font-family:var(--mono);background:linear-gradient(90deg,#c4b5fd,var(--teal));-webkit-background-clip:text;background-clip:text;color:transparent}
+.stat .l{font-size:.82rem;color:var(--muted)}
+
+/* ---------- pipeline svg ---------- */
+.diagram{background:radial-gradient(ellipse at 50% 0%,#101b38,#080d1b 70%);border:1px solid var(--line);border-radius:18px;padding:18px;margin-top:26px}
+.diagram svg{width:100%;height:auto;display:block}
+.node rect{fill:#111c39;stroke:#2a3b6e;stroke-width:1.2}
+.node.task rect{fill:#1a1440;stroke:#6d5bd9}
+.node.fn rect{fill:#0c2a2b;stroke:#14a39a}
+.node.infra rect{fill:#141d33;stroke:#3b4a73;stroke-dasharray:4 4}
+.node text{fill:var(--text);font-family:var(--mono);font-size:13px}
+.node text.s{fill:var(--muted);font-size:10.5px;font-family:var(--sans)}
+.wire{stroke:#2f4177;stroke-width:1.6;fill:none}
+.wire.hot{stroke:url(#wireGrad);stroke-dasharray:6 7;animation:flow 1.3s linear infinite}
+@keyframes flow{to{stroke-dashoffset:-26}}
+.groupbox{fill:none;stroke:#34467a;stroke-dasharray:5 6;rx:14}
+.glabel{fill:var(--dim);font-family:var(--mono);font-size:11px;letter-spacing:.08em}
+.legend{display:flex;gap:20px;flex-wrap:wrap;margin-top:12px;font-size:.82rem;color:var(--muted)}
+.legend span{display:inline-flex;align-items:center;gap:8px}
+.legend i{width:14px;height:14px;border-radius:4px;display:inline-block}
+
+/* ---------- record layout ---------- */
+.records{display:flex;flex-direction:column;gap:6px;margin-top:22px;font-family:var(--mono);font-size:.8rem}
+.rec{display:grid;grid-template-columns:54px 1fr;align-items:center;gap:12px}
+.rec .k{color:var(--dim);text-align:right}
+.rec .bar{height:30px;border-radius:7px;display:flex;align-items:center;padding:0 12px;color:#0b1020;font-weight:700;letter-spacing:.02em;transform-origin:left;transform:scaleX(0);transition:transform .9s cubic-bezier(.2,.8,.2,1)}
+.in .rec .bar{transform:scaleX(1)}
+.rec.ind .bar{margin-left:22px} .rec.ind2 .bar{margin-left:44px}
+.ruler{font-family:var(--mono);font-size:.72rem;color:var(--dim);margin:18px 0 6px;overflow-x:auto;white-space:nowrap}
+.entry-row{display:flex;overflow-x:auto;border:1px solid var(--line);border-radius:10px;background:#060a15}
+.fld{flex:0 0 auto;padding:10px 8px;border-right:1px solid var(--line);text-align:center;min-width:56px;cursor:default;transition:background .2s}
+.fld:last-child{border-right:0}
+.fld .v{font-family:var(--mono);font-size:.8rem;color:var(--text);white-space:pre}
+.fld .p{font-family:var(--mono);font-size:.62rem;color:var(--dim)}
+.fld .n{font-size:.66rem;color:var(--muted);margin-top:3px;white-space:nowrap}
+.fld:hover{background:#121d3b}
+.fld.hl .v{color:var(--teal)}
+
+/* check digit */
+.cd{display:grid;grid-template-columns:1fr 1fr;gap:22px;margin-top:22px}
+@media(max-width:900px){.cd{grid-template-columns:1fr}}
+.cd input{width:100%;font-family:var(--mono);font-size:1.6rem;letter-spacing:.35em;background:#060a15;border:1px solid var(--line);color:var(--text);border-radius:10px;padding:12px 14px;outline:none}
+.cd input:focus{border-color:var(--teal);box-shadow:0 0 0 3px rgba(45,212,191,.15)}
+.cdgrid{display:grid;grid-template-columns:repeat(9,1fr);gap:6px;margin-top:14px;font-family:var(--mono);text-align:center}
+.cdgrid div{background:#0b1430;border:1px solid var(--line);border-radius:8px;padding:6px 0;font-size:.85rem}
+.cdgrid .h{background:transparent;border:0;color:var(--dim);font-size:.68rem}
+.cdgrid .res{border-color:var(--teal);color:var(--teal);font-weight:700}
+.cdout{font-family:var(--mono);font-size:.9rem;color:var(--muted);margin-top:12px}
+.cdout b{color:var(--teal);font-size:1.3rem}
+.err{color:var(--rose);font-size:.82rem;margin-top:6px;min-height:1.2em}
+
+/* data model */
+.tbl{font-family:var(--mono);font-size:.78rem}
+.tbl .th{display:flex;justify-content:space-between;align-items:center;padding:10px 14px;border-bottom:1px solid var(--line);background:#121d3b;border-radius:var(--r) var(--r) 0 0}
+.tbl .th b{font-size:.92rem;color:var(--text)}
+.tbl .th span{color:var(--dim);font-size:.7rem}
+.tbl .row{display:flex;justify-content:space-between;padding:5px 14px;border-bottom:1px dashed #1a2647;color:#c7d2fe}
+.tbl .row span{color:var(--dim)}
+.tbl .row.pk{color:var(--amber)} .tbl .row.fk{color:var(--violet)}
+.tbl .con{padding:9px 14px;color:var(--teal);font-size:.72rem}
+.tblcard{padding:0}
+
+/* codes */
+.codes{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-top:20px}
+@media(max-width:900px){.codes{grid-template-columns:repeat(2,1fr)}}
+.code{border:1px solid var(--line);border-radius:12px;padding:16px;background:var(--panel);position:relative}
+.code .c{font-family:var(--mono);font-size:1.5rem;font-weight:700}
+.code .t{font-size:.8rem;color:var(--muted)}
+.code .s{font-size:.7rem;color:var(--dim);margin-top:6px;font-family:var(--mono)}
+.code .ord{position:absolute;top:10px;right:12px;font-family:var(--mono);font-size:.7rem;color:var(--dim)}
+
+/* code block */
+pre.code{font-family:var(--mono);font-size:.8rem;line-height:1.7;background:#060a15;border:1px solid var(--line);border-radius:12px;padding:16px 18px;overflow-x:auto;color:#c7d2fe;margin-top:14px}
+pre.code .k{color:#c4b5fd} pre.code .s{color:#86efac} pre.code .c{color:var(--dim)} pre.code .f{color:var(--teal)} pre.code .n{color:var(--amber)}
+
+/* lost update demo */
+.race{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-top:20px}
+@media(max-width:900px){.race{grid-template-columns:1fr}}
+.lane{border:1px solid var(--line);border-radius:12px;background:#0a1124;padding:14px;min-height:250px}
+.lane h4{font-family:var(--mono);font-size:.8rem;color:var(--muted);margin-bottom:10px;font-weight:500}
+.step{font-family:var(--mono);font-size:.78rem;padding:7px 10px;border-radius:8px;margin-bottom:7px;background:#111b37;border:1px solid var(--line);opacity:0;transform:translateY(6px);transition:all .35s}
+.step.show{opacity:1;transform:none}
+.step.wait{border-color:var(--amber);color:var(--amber)}
+.step.bad{border-color:var(--rose);color:var(--rose)}
+.step.good{border-color:var(--green);color:var(--green)}
+.db{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}
+.db .val{font-family:var(--mono);font-size:2.2rem;font-weight:700;transition:color .3s}
+.db .cap{font-size:.78rem;color:var(--muted)}
+.db .lock{font-size:.78rem;margin-top:8px;font-family:var(--mono);color:var(--dim);min-height:1.3em}
+.toggle{display:inline-flex;border:1px solid var(--line);border-radius:10px;overflow:hidden;margin-top:14px}
+.toggle button{background:transparent;border:0;color:var(--muted);padding:9px 16px;font:600 .85rem var(--sans);cursor:pointer}
+.toggle button.on{background:var(--panel2);color:var(--text)}
+.runbtn{margin-left:10px;background:linear-gradient(135deg,var(--violet),var(--teal2));border:0;color:#fff;padding:9px 18px;border-radius:10px;font:600 .85rem var(--sans);cursor:pointer}
+
+/* decisions */
+.adr{border-left:3px solid var(--violet)}
+.adr .q{font-weight:650;margin-bottom:6px}
+.adr .why{font-size:.9rem;color:var(--muted)}
+.adr .alt{font-size:.82rem;color:var(--dim);margin-top:8px;font-family:var(--mono)}
+
+/* roadmap */
+.road{position:relative;margin-top:26px;padding-left:28px}
+.road:before{content:"";position:absolute;left:8px;top:6px;bottom:6px;width:2px;background:linear-gradient(var(--teal),var(--violet) 40%,var(--line))}
+.ms{position:relative;padding:0 0 22px}
+.ms:before{content:"";position:absolute;left:-26px;top:7px;width:14px;height:14px;border-radius:50%;background:var(--bg);border:2px solid var(--line)}
+.ms.done:before{background:var(--teal);border-color:var(--teal);box-shadow:0 0 12px var(--teal)}
+.ms.now:before{border-color:var(--amber);animation:pulse 1.6s infinite}
+@keyframes pulse{0%{box-shadow:0 0 0 0 rgba(245,176,65,.6)}100%{box-shadow:0 0 0 12px rgba(245,176,65,0)}}
+.ms .v{font-family:var(--mono);font-size:.8rem;color:var(--dim)}
+.ms h3{margin:2px 0 4px}
+.ms p{color:var(--muted);font-size:.92rem}
+.badge{font-family:var(--mono);font-size:.68rem;padding:2px 8px;border-radius:999px;margin-left:8px;vertical-align:2px}
+.badge.done{background:rgba(74,222,128,.12);color:var(--green)} .badge.now{background:rgba(245,176,65,.14);color:var(--amber)} .badge.next{background:rgba(147,161,198,.12);color:var(--muted)}
+
+/* reveal */
+.rv{opacity:0;transform:translateY(22px);transition:opacity .8s ease,transform .8s ease}
+.rv.in{opacity:1;transform:none}
+
+footer{max-width:1180px;margin:0 auto;padding:40px 24px 60px;border-top:1px solid var(--line);color:var(--dim);font-size:.85rem;display:flex;justify-content:space-between;flex-wrap:wrap;gap:12px}
+
+@media (prefers-reduced-motion: reduce){
+  *{animation:none!important;transition:none!important}
+  .rv{opacity:1;transform:none}
+  .rec .bar{transform:none}
+}
+</style>
+</head>
+<body>
+<div class="bg-grid"></div><div class="bg-glow a"></div><div class="bg-glow b"></div>
+
+<nav>
+  <div class="inner">
+    <a class="brand" href="index.html"><span class="dot"></span>Richard Fox</a>
+    <div class="links">
+      <a href="#overview">Overview</a>
+      <a href="#architecture">Architecture</a>
+      <a href="#nacha">NACHA</a>
+      <a href="#data">Data model</a>
+      <a href="#validation">Validation</a>
+      <a href="#concurrency">Concurrency</a>
+      <a href="#decisions">Decisions</a>
+      <a href="#roadmap">Roadmap</a>
+    </div>
+  </div>
+  <div id="progress"></div>
+</nav>
+
+<main>
+
+<!-- ================= HERO ================= -->
+<header class="hero">
+  <div class="rv">
+    <div class="eyebrow">Design document · Receiving-bank systems</div>
+    <h1>ACH Batch <span class="grad">Processor</span></h1>
+    <p class="sub">A receiving-bank (RDFI) pipeline that claims NACHA files as they land, parses and reconciles them, and validates every entry in parallel against account state, with exactly-once accounting under concurrency.</p>
+    <div class="chips">
+      <span class="chip"><b>Django</b> 5.2 LTS</span>
+      <span class="chip"><b>Celery</b> chains + chords</span>
+      <span class="chip"><b>PostgreSQL</b> row locks</span>
+      <span class="chip"><b>Redis</b> broker + results</span>
+      <span class="chip"><b>Docker</b> Compose</span>
+      <span class="chip"><b>pytest</b></span>
+    </div>
+    <div class="btns">
+      <a class="btn primary" href="#architecture">Explore the architecture →</a>
+      <!-- TODO: replace with the public GitHub repo URL -->
+      <a class="btn" href="#">View source on GitHub</a>
+    </div>
+    <div class="meta">
+      <div>Author<strong>Richard Fox</strong></div>
+      <div>Status<strong>v0.3 in progress</strong></div>
+      <div>Updated<strong>Nov 2026</strong></div>
+    </div>
+  </div>
+  <div class="term rv">
+    <div class="bar"><i></i><i></i><i></i><span>celery worker · ach_processor</span></div>
+    <pre id="termtext"></pre>
+  </div>
+</header>
+
+<div class="stats rv">
+  <div class="stat"><div class="n" data-count="94">0</div><div class="l">characters per NACHA record, positionally parsed</div></div>
+  <div class="stat"><div class="n" data-count="5">0</div><div class="l">Celery tasks in a chain → chord pipeline</div></div>
+  <div class="stat"><div class="n" data-count="6">0</div><div class="l">Docker services: web, worker, beat, flower, postgres, redis</div></div>
+  <div class="stat"><div class="n" data-count="5">0</div><div class="l">return codes enforced per entry (R28 R03 R02 R16 R01)</div></div>
+</div>
+
+<!-- ================= OVERVIEW ================= -->
+<section id="overview" class="rv">
+  <div class="eyebrow">01 · Overview</div>
+  <h2>The problem</h2>
+  <p class="lead">Every payroll deposit and auto-pay bill in the US moves over ACH as fixed-width text files. A receiving bank gets those files from the ACH operator, and for every entry it must decide: <em>can this be posted to one of our accounts, or does it go back with a return code?</em> The files are large, they arrive on a schedule, and the same account can be hit by many entries at once. Correctness under concurrency is the whole job.</p>
+
+  <div class="grid g3" style="margin-top:28px">
+    <div class="card"><span class="tag">GOAL</span><h3>Never process a file twice</h3><p>Files are claimed with an atomic filesystem rename, and the file's SHA-256 is unique in the database as a second line of defence.</p></div>
+    <div class="card"><span class="tag">GOAL</span><h3>Never count a debit twice</h3><p>Entry evaluation is idempotent: only PENDING entries are touched, and status plus daily usage commit in a single transaction.</p></div>
+    <div class="card"><span class="tag">GOAL</span><h3>Scale out per file</h3><p>Entries are split into chunks and checked in parallel by a Celery chord; one callback reconciles the file once every chunk is done.</p></div>
+  </div>
+  <div class="grid g2" style="margin-top:18px">
+    <div class="card"><span class="tag">IN SCOPE</span><ul><li>Inbound NACHA files (PPD / CCD), record types 1 5 6 7 8 9</li><li>Structural validation: record lengths, control totals, entry hash</li><li>Per-entry checks: routing check digit, account status, daily debit limit</li><li>Test-data generator and account seeding for repeatable demos</li></ul></div>
+    <div class="card"><span class="tag">OUT OF SCOPE (FOR NOW)</span><ul><li>Real money movement and Fed connectivity (mocked in v0.4)</li><li>Originating outbound files</li><li>OFAC screening beyond a mock sanctions check</li><li>Multi-tenant banks</li></ul></div>
+  </div>
+</section>
+
+<!-- ================= ARCHITECTURE ================= -->
+<section id="architecture">
+  <div class="rv">
+    <div class="eyebrow">02 · Architecture</div>
+    <h2>A chain that fans out into a chord</h2>
+    <p class="lead">Beat wakes the scanner every minute. Each claimed file gets its own Celery <strong>chain</strong>: ingest, then build a <strong>chord</strong> of parallel entry checks whose results are reconciled by one callback. Only IDs and paths ever cross Redis; PostgreSQL holds the truth.</p>
+  </div>
+
+  <div class="diagram rv">
+    <svg viewBox="0 0 1120 400" role="img" aria-label="Pipeline: Beat triggers scan_incoming, which starts a chain of process_file and check_file; check_file fans out a chord of check_entries tasks that finalize_file reconciles.">
+      <defs>
+        <linearGradient id="wireGrad" x1="0" x2="1"><stop offset="0" stop-color="#8b5cf6"/><stop offset="1" stop-color="#2dd4bf"/></linearGradient>
+        <filter id="glow"><feGaussianBlur stdDeviation="3" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+        <marker id="ah" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M1 1L8 5L1 9" fill="none" stroke="#5b6fa8" stroke-width="1.6"/></marker>
+      </defs>
+
+      <!-- group boxes -->
+      <rect class="groupbox" x="268" y="52" width="372" height="120" rx="14"/>
+      <text class="glabel" x="284" y="44">CHAIN · ONE PER FILE</text>
+      <rect class="groupbox" x="664" y="20" width="438" height="356" rx="14"/>
+      <text class="glabel" x="680" y="12">CHORD · PARALLEL HEADER → ONE CALLBACK</text>
+
+      <!-- wires -->
+      <path id="w1" class="wire hot" d="M128 112 H160" marker-end="url(#ah)"/>
+      <path id="w2" class="wire hot" d="M252 112 H286" marker-end="url(#ah)"/>
+      <path id="w3" class="wire hot" d="M440 112 H468" marker-end="url(#ah)"/>
+      <path id="w4a" class="wire hot" d="M622 112 C 660 112, 660 92, 696 92" marker-end="url(#ah)"/>
+      <path id="w4b" class="wire hot" d="M622 112 C 660 112, 660 198, 696 198" marker-end="url(#ah)"/>
+      <path id="w4c" class="wire hot" d="M622 112 C 660 112, 660 304, 696 304" marker-end="url(#ah)"/>
+      <path id="w5a" class="wire hot" d="M850 92 C 890 92, 890 198, 928 198" marker-end="url(#ah)"/>
+      <path id="w5b" class="wire hot" d="M850 198 H928" marker-end="url(#ah)"/>
+      <path id="w5c" class="wire hot" d="M850 304 C 890 304, 890 198, 928 198" marker-end="url(#ah)"/>
+
+      <!-- nodes -->
+      <g class="node infra"><rect x="20" y="82" width="108" height="60" rx="12"/><text x="74" y="108" text-anchor="middle">Beat</text><text class="s" x="74" y="126" text-anchor="middle">every 60 s</text></g>
+      <g class="node task"><rect x="160" y="82" width="92" height="60" rx="12"/><text x="206" y="106" text-anchor="middle" font-size="11.5">scan_</text><text x="206" y="122" text-anchor="middle" font-size="11.5">incoming</text></g>
+      <g class="node task"><rect x="288" y="82" width="152" height="60" rx="12"/><text x="364" y="108" text-anchor="middle">process_file</text><text class="s" x="364" y="126" text-anchor="middle">parse · ingest · PARSED</text></g>
+      <g class="node task"><rect x="470" y="82" width="152" height="60" rx="12"/><text x="546" y="108" text-anchor="middle">check_file</text><text class="s" x="546" y="126" text-anchor="middle">IDs → chunks → chord</text></g>
+
+      <g class="node task"><rect x="698" y="62" width="152" height="60" rx="12"/><text x="774" y="88" text-anchor="middle">check_entries</text><text class="s" x="774" y="106" text-anchor="middle">chunk 1 · worker 1</text></g>
+      <g class="node task"><rect x="698" y="168" width="152" height="60" rx="12"/><text x="774" y="194" text-anchor="middle">check_entries</text><text class="s" x="774" y="212" text-anchor="middle">chunk 2 · worker 2</text></g>
+      <g class="node task"><rect x="698" y="274" width="152" height="60" rx="12"/><text x="774" y="300" text-anchor="middle">check_entries</text><text class="s" x="774" y="318" text-anchor="middle">chunk N · worker N</text></g>
+      <g class="node task"><rect x="930" y="168" width="156" height="60" rx="12"/><text x="1008" y="194" text-anchor="middle">finalize_file</text><text class="s" x="1008" y="212" text-anchor="middle">Σ results → CHECKED</text></g>
+
+      <!-- service layer -->
+      <g class="node fn"><rect x="288" y="232" width="152" height="52" rx="10"/><text x="364" y="255" text-anchor="middle" font-size="12">ingest_file()</text><text class="s" x="364" y="272" text-anchor="middle">services.py</text></g>
+      <g class="node fn"><rect x="288" y="306" width="152" height="52" rx="10"/><text x="364" y="329" text-anchor="middle" font-size="12">evaluate_entries()</text><text class="s" x="364" y="346" text-anchor="middle">services.py · locks</text></g>
+      <g class="node fn"><rect x="470" y="306" width="152" height="52" rx="10"/><text x="546" y="329" text-anchor="middle" font-size="12">check_*()</text><text class="s" x="546" y="346" text-anchor="middle">checks.py · pure</text></g>
+      <path class="wire" d="M364 142 V230" stroke-dasharray="3 5" marker-end="url(#ah)"/>
+      <path class="wire" d="M696 304 C 600 304, 560 332, 442 332" stroke-dasharray="3 5" marker-end="url(#ah)"/>
+      <path class="wire" d="M440 332 H468" stroke-dasharray="3 5" marker-end="url(#ah)"/>
+
+      <!-- moving packets -->
+      <g filter="url(#glow)">
+        <circle r="4.5" fill="#2dd4bf"><animateMotion dur="2.4s" repeatCount="indefinite" path="M128 112 H160"/></circle>
+        <circle r="4.5" fill="#c4b5fd"><animateMotion dur="2.4s" begin=".4s" repeatCount="indefinite" path="M252 112 H286"/></circle>
+        <circle r="4.5" fill="#2dd4bf"><animateMotion dur="2.4s" begin=".8s" repeatCount="indefinite" path="M440 112 H468"/></circle>
+        <circle r="4" fill="#f5b041"><animateMotion dur="2.4s" begin="1.2s" repeatCount="indefinite" path="M622 112 C 660 112, 660 92, 696 92"/></circle>
+        <circle r="4" fill="#f5b041"><animateMotion dur="2.4s" begin="1.2s" repeatCount="indefinite" path="M622 112 C 660 112, 660 198, 696 198"/></circle>
+        <circle r="4" fill="#f5b041"><animateMotion dur="2.4s" begin="1.2s" repeatCount="indefinite" path="M622 112 C 660 112, 660 304, 696 304"/></circle>
+        <circle r="4" fill="#4ade80"><animateMotion dur="2.4s" begin="1.8s" repeatCount="indefinite" path="M850 92 C 890 92, 890 198, 928 198"/></circle>
+        <circle r="4" fill="#4ade80"><animateMotion dur="2.4s" begin="1.8s" repeatCount="indefinite" path="M850 198 H928"/></circle>
+        <circle r="4" fill="#4ade80"><animateMotion dur="2.4s" begin="1.8s" repeatCount="indefinite" path="M850 304 C 890 304, 890 198, 928 198"/></circle>
+      </g>
+    </svg>
+    <div class="legend">
+      <span><i style="background:#1a1440;border:1px solid #6d5bd9"></i>Celery task · tasks.py</span>
+      <span><i style="background:#0c2a2b;border:1px solid #14a39a"></i>Plain function · services.py / checks.py</span>
+      <span><i style="background:#141d33;border:1px dashed #3b4a73"></i>Scheduler</span>
+    </div>
+  </div>
+
+  <div class="grid g4 rv" style="margin-top:22px">
+    <div class="card"><span class="tag">1 · CLAIM</span><h3>Atomic rename</h3><p>Senders write <code>.tmp</code>, then rename to <code>.ach</code>. The scanner claims a file by renaming it into <code>processing/</code>. Only one process can win.</p></div>
+    <div class="card"><span class="tag">2 · INGEST</span><h3>Parse + reconcile</h3><p>Fixed-width parse, control totals and entry hash verified, then file, batches and entries saved in one transaction.</p></div>
+    <div class="card"><span class="tag">3 · FAN OUT</span><h3>Chunk + chord</h3><p>PENDING entry IDs are split into chunks of <code>ACH_CHUNK_SIZE</code>, and each chunk becomes a parallel <code>check_entries</code> task.</p></div>
+    <div class="card"><span class="tag">4 · RECONCILE</span><h3>One callback</h3><p>The chord's result backend counts completions; <code>finalize_file</code> receives every summary and marks the file CHECKED.</p></div>
+  </div>
+
+<pre class="code rv"><span class="c"># tasks.py: thin tasks, fat services</span>
+<span class="f">chain</span>(process_file.<span class="f">s</span>(path), check_file.<span class="f">s</span>()).<span class="f">delay</span>()          <span class="c"># one chain per claimed file</span>
+
+<span class="k">@shared_task</span>(bind=<span class="n">True</span>)
+<span class="k">def</span> <span class="f">check_file</span>(self, file_id):
+    ids = <span class="f">pending_entry_ids</span>(file_id)
+    <span class="k">if not</span> ids:
+        <span class="k">return</span> finalize_file([], file_id)
+    header = <span class="f">group</span>(check_entries.<span class="f">s</span>(c) <span class="k">for</span> c <span class="k">in</span> <span class="f">chunked</span>(ids, settings.ACH_CHUNK_SIZE))
+    <span class="f">chord</span>(header, finalize_file.<span class="f">s</span>(file_id)).<span class="f">delay</span>()      <span class="c"># body receives [summary, …]</span></pre>
+</section>
+
+<!-- ================= NACHA ================= -->
+<section id="nacha">
+  <div class="rv">
+    <div class="eyebrow">03 · The format</div>
+    <h2>NACHA, 94 characters at a time</h2>
+    <p class="lead">A NACHA file is a strict hierarchy of fixed-width records. Every line is exactly 94 characters, the file is padded to a multiple of 10 lines with filler records of nines, and every level carries control totals that must reconcile with the level below.</p>
+  </div>
+
+  <div class="records rv">
+    <div class="rec"><div class="k">1</div><div class="bar" style="background:#c4b5fd;width:100%">File Header · immediate destination / origin, creation date</div></div>
+    <div class="rec ind"><div class="k">5</div><div class="bar" style="background:#67e8f9;width:96%">Batch Header · company, SEC code (PPD/CCD), effective date</div></div>
+    <div class="rec ind2"><div class="k">6</div><div class="bar" style="background:#2dd4bf;width:92%">Entry Detail · transaction code, RDFI routing, account, amount, trace</div></div>
+    <div class="rec ind2"><div class="k">6</div><div class="bar" style="background:#2dd4bf;width:92%">Entry Detail · …</div></div>
+    <div class="rec ind2"><div class="k">7</div><div class="bar" style="background:#99f6e4;width:92%">Addenda (optional)</div></div>
+    <div class="rec ind"><div class="k">8</div><div class="bar" style="background:#67e8f9;width:96%">Batch Control · entry count, entry hash, debit / credit totals</div></div>
+    <div class="rec"><div class="k">9</div><div class="bar" style="background:#c4b5fd;width:100%">File Control · batch count, block count, file totals</div></div>
+    <div class="rec"><div class="k">9…</div><div class="bar" style="background:#334155;color:#94a3b8;width:100%">9999999999…  filler to a multiple of 10 lines (blocking factor)</div></div>
+  </div>
+
+  <div class="rv">
+    <div class="ruler">Entry Detail (record 6), hover a field. Positions are 1-based, inclusive.</div>
+    <div class="entry-row" id="entryRow"></div>
+  </div>
+
+  <div class="cd rv">
+    <div class="card">
+      <span class="tag">INTERACTIVE</span>
+      <h3>ABA routing check digit</h3>
+      <p>The 9th digit of a routing number is a checksum over the first eight, using weights 3-7-1. Type any 8 digits.</p>
+      <div style="margin-top:14px"><input id="cdin" maxlength="8" value="04200001" inputmode="numeric" aria-label="First eight routing digits"></div>
+      <div class="err" id="cderr"></div>
+      <div class="cdgrid" id="cdgrid"></div>
+      <div class="cdout" id="cdout"></div>
+    </div>
+    <div class="card">
+      <span class="tag">RECONCILIATION</span>
+      <h3>Totals that must agree</h3>
+      <ul>
+        <li><b>Entry hash</b>: sum of the 8-digit RDFI routing numbers, keeping the rightmost 10 digits</li>
+        <li><b>Debit / credit totals</b>: per batch, from transaction codes (2nd digit 2/3 = credit, 7/8 = debit)</li>
+        <li><b>Counts</b>: entries per batch, batches per file, 10-line blocks per file</li>
+        <li><b>Trace numbers</b>: ODFI routing (8) + 7-digit sequence, unique per file</li>
+      </ul>
+      <p style="margin-top:10px">Any mismatch raises <code>AchFormatError</code> and the whole file is rejected before a single row is written, because ingest runs in one transaction.</p>
+<pre class="code"><span class="k">def</span> <span class="f">check_digit</span>(routing8):
+    w = (<span class="n">3</span>,<span class="n">7</span>,<span class="n">1</span>,<span class="n">3</span>,<span class="n">7</span>,<span class="n">1</span>,<span class="n">3</span>,<span class="n">7</span>)
+    total = <span class="f">sum</span>(<span class="f">int</span>(d)*k <span class="k">for</span> d, k <span class="k">in</span> <span class="f">zip</span>(routing8, w, strict=<span class="n">True</span>))
+    <span class="k">return</span> <span class="f">str</span>((<span class="n">10</span> - total % <span class="n">10</span>) % <span class="n">10</span>)</pre>
+    </div>
+  </div>
+</section>
+
+<!-- ================= DATA ================= -->
+<section id="data">
+  <div class="rv">
+    <div class="eyebrow">04 · Data model</div>
+    <h2>Two halves: what arrived, and what we hold</h2>
+    <p class="lead">The left side mirrors the file (file → batches → entries). The right side is the bank's own state (customers, accounts, daily usage). Integrity rules live in the database as constraints, not just in Python.</p>
+  </div>
+  <div class="grid g3 rv" style="margin-top:24px">
+    <div class="card tblcard tbl">
+      <div class="th"><b>AchFile</b><span>one per received file</span></div>
+      <div class="row pk">id <span>bigserial</span></div>
+      <div class="row">sha256 <span>unique</span></div>
+      <div class="row">status <span>PARSED → CHECKED</span></div>
+      <div class="row">batch / entry counts <span>int</span></div>
+      <div class="row">total_debit/credit_cents <span>bigint</span></div>
+      <div class="con">UNIQUE(sha256): identical bytes never ingest twice</div>
+    </div>
+    <div class="card tblcard tbl">
+      <div class="th"><b>Batch</b><span>record 5 + 8</span></div>
+      <div class="row pk">id <span>bigserial</span></div>
+      <div class="row fk">ach_file → AchFile <span>CASCADE</span></div>
+      <div class="row">company_name, sec_code <span>str</span></div>
+      <div class="row">effective_date <span>date</span></div>
+      <div class="row">entry_count, totals <span>int</span></div>
+      <div class="con">UNIQUE(ach_file, batch_number)</div>
+    </div>
+    <div class="card tblcard tbl">
+      <div class="th"><b>Entry</b><span>record 6</span></div>
+      <div class="row pk">id <span>bigserial</span></div>
+      <div class="row fk">ach_file, batch <span>CASCADE</span></div>
+      <div class="row">routing_number, account_number <span>str</span></div>
+      <div class="row">amount_cents <span>bigint ≥ 0</span></div>
+      <div class="row">status · return_code <span>PENDING → VALID/INVALID</span></div>
+      <div class="con">UNIQUE(ach_file, trace_number) · CHECK(amount ≥ 0)</div>
+    </div>
+    <div class="card tblcard tbl">
+      <div class="th"><b>Customer</b><span>bank's customers</span></div>
+      <div class="row pk">id <span>bigserial</span></div>
+      <div class="row">name <span>str</span></div>
+      <div class="row">kind <span>INDIVIDUAL / BUSINESS</span></div>
+      <div class="con">PROTECTed by Account</div>
+    </div>
+    <div class="card tblcard tbl">
+      <div class="th"><b>Account</b><span>where money posts</span></div>
+      <div class="row pk">id <span>bigserial</span></div>
+      <div class="row fk">customer → Customer <span>PROTECT</span></div>
+      <div class="row">routing, account_number <span>str</span></div>
+      <div class="row">status <span>OPEN / CLOSED / FROZEN</span></div>
+      <div class="row">daily_limit_cents <span>bigint</span></div>
+      <div class="con">UNIQUE(routing, account_number)</div>
+    </div>
+    <div class="card tblcard tbl">
+      <div class="th"><b>DailyUsage</b><span>debit velocity</span></div>
+      <div class="row pk">id <span>bigserial</span></div>
+      <div class="row fk">account → Account <span>PROTECT</span></div>
+      <div class="row">date <span>NOT NULL</span></div>
+      <div class="row">used_cents <span>bigint</span></div>
+      <div class="con">UNIQUE(account, date): one lockable row per account per day</div>
+    </div>
+  </div>
+  <p class="muted rv" style="margin-top:14px;font-size:.88rem">All money is stored as integer cents. No floats touch an amount anywhere in the pipeline.</p>
+</section>
+
+<!-- ================= VALIDATION ================= -->
+<section id="validation">
+  <div class="rv">
+    <div class="eyebrow">05 · Entry validation</div>
+    <h2>Pure checks, first failure wins</h2>
+    <p class="lead">Each check is a pure function: plain values in, an R-code or <code>None</code> out. No database access, so every branch is unit-tested in milliseconds. The service layer loads data in bulk and runs the checks in order; Python's <code>or</code> short-circuits on the first failure.</p>
+  </div>
+  <div class="codes rv">
+    <div class="code"><span class="ord">1</span><div class="c" style="color:#f472b6">R28</div><div class="t">Routing check digit error</div><div class="s">check_routing()</div></div>
+    <div class="code"><span class="ord">2</span><div class="c" style="color:#fb7185">R03</div><div class="t">No account / unable to locate</div><div class="s">check_account(None)</div></div>
+    <div class="code"><span class="ord">2</span><div class="c" style="color:#f5b041">R02</div><div class="t">Account closed</div><div class="s">check_account()</div></div>
+    <div class="code"><span class="ord">2</span><div class="c" style="color:#fbbf24">R16</div><div class="t">Account frozen</div><div class="s">check_account()</div></div>
+    <div class="code"><span class="ord">3</span><div class="c" style="color:#60a5fa">R01</div><div class="t">Over daily debit limit*</div><div class="s">check_limit()</div></div>
+  </div>
+  <p class="muted rv" style="font-size:.82rem;margin-top:10px">* NACHA has no limit-specific return code; using R01 for a velocity breach is a documented bank-policy choice. Credits are never limit-checked.</p>
+<pre class="code rv"><span class="c"># services.py: one chunk, a handful of queries no matter its size</span>
+<span class="k">with</span> transaction.<span class="f">atomic</span>():
+    entries  = <span class="f">list</span>(Entry.objects.<span class="f">select_for_update</span>(of=(<span class="s">"self"</span>,)).<span class="f">select_related</span>(<span class="s">"batch"</span>)
+                    .<span class="f">filter</span>(id__in=ids, status=PENDING).<span class="f">order_by</span>(<span class="s">"id"</span>))   <span class="c"># idempotent + locked</span>
+    accounts = {(a.routing, a.account_number): a <span class="k">for</span> a <span class="k">in</span> Account.objects.<span class="f">filter</span>(…)}   <span class="c"># one query</span>
+
+    <span class="k">for</span> e <span class="k">in</span> entries:
+        acct = accounts.<span class="f">get</span>((e.routing_number, e.account_number))
+        code = <span class="f">check_routing</span>(e.routing_number) <span class="k">or</span> <span class="f">check_account</span>(acct) <span class="k">or</span> limit_code
+        …                                                     <span class="c"># status + usage set in memory</span>
+
+    Entry.objects.<span class="f">bulk_update</span>(entries, [<span class="s">"status"</span>, <span class="s">"return_code"</span>])          <span class="c"># one write</span></pre>
+</section>
+
+<!-- ================= CONCURRENCY ================= -->
+<section id="concurrency">
+  <div class="rv">
+    <div class="eyebrow">06 · Concurrency &amp; correctness</div>
+    <h2>Why the row locks exist</h2>
+    <p class="lead">Two chunks can hold debits for the same account. Each one reads today's usage, adds its debit, and writes it back. Without a lock, one write silently erases the other, and an account sails past its limit. Run it both ways:</p>
+  </div>
+
+  <div class="rv">
+    <div class="toggle" role="group" aria-label="Locking mode">
+      <button id="mNo" class="on" type="button">No lock</button>
+      <button id="mLock" type="button">SELECT … FOR UPDATE</button>
+    </div>
+    <button class="runbtn" id="runRace" type="button">▶ Run</button>
+    <div class="race">
+      <div class="lane"><h4>chunk A · worker 3</h4><div id="laneA"></div></div>
+      <div class="lane db">
+        <div class="cap">DailyUsage.used_cents · limit 50,000</div>
+        <div class="val" id="dbval">40,000</div>
+        <div class="lock" id="dblock"></div>
+        <div class="cap" id="dbnote" style="margin-top:10px"></div>
+      </div>
+      <div class="lane"><h4>chunk B · worker 7</h4><div id="laneB"></div></div>
+    </div>
+  </div>
+
+  <div class="grid g3 rv" style="margin-top:22px">
+    <div class="card"><span class="tag">LOCKING</span><h3>Lock rows, in order</h3><p>Usage rows are created if missing (<code>ignore_conflicts</code> on the unique key), then locked with <code>select_for_update().order_by("id")</code>. A consistent lock order means no deadlocks.</p></div>
+    <div class="card"><span class="tag">IDEMPOTENCY</span><h3>Retries are harmless</h3><p>Only PENDING entries are evaluated, and status changes and usage increments commit together. A retried or duplicated task finds nothing left to do.</p></div>
+    <div class="card"><span class="tag">MESSAGES</span><h3>IDs, never payloads</h3><p>Redis carries paths, file IDs and lists of entry IDs. Every task re-reads fresh rows inside its own transaction, so nothing goes stale in a queue.</p></div>
+  </div>
+</section>
+
+<!-- ================= DECISIONS ================= -->
+<section id="decisions">
+  <div class="rv">
+    <div class="eyebrow">07 · Design decisions</div>
+    <h2>Trade-offs, written down</h2>
+  </div>
+  <div class="grid g2 rv" style="margin-top:20px">
+    <div class="card adr"><div class="q">Separate ingest from evaluation</div><div class="why">Checking inside the parser would save one UPDATE, but it would couple file-format validation to bank data, hold usage locks for the whole ingest, and leave nothing to fan out. Keeping them apart makes ingest pure, checks parallel, and either step re-runnable.</div><div class="alt">rejected: single-pass parse-and-check</div></div>
+    <div class="card adr"><div class="q">A DailyUsage table, not a column on Account</div><div class="why">A <code>used_today</code> column needs a midnight reset job, can't represent late or future-dated files, and keeps no history. One row per (account, date) needs no reset and gives a natural row to lock.</div><div class="alt">rejected: Account.used_today_cents + nightly reset</div></div>
+    <div class="card adr"><div class="q">Thin tasks, fat services</div><div class="why">Tasks only move IDs and call services. Business logic stays plain Python, testable without a worker, callable from a view, the shell or a task, and unchanged when orchestration moves from a loop to a chord.</div><div class="alt">rejected: logic inside @shared_task bodies</div></div>
+    <div class="card adr"><div class="q">The filesystem rename is the lock</div><div class="why">A rename within one filesystem is atomic, so concurrent scanners can't both claim a file and no Redis lock is needed. SHA-256 uniqueness backs it up against the same content under a new name.</div><div class="alt">rejected: Redis lock around scan_incoming (for now)</div></div>
+    <div class="card adr"><div class="q">Return codes, not booleans</div><div class="why">A check that says only "no" loses the reason the bank must report. Returning <code>None</code> or an R-code keeps the verdict and the reason together, and still composes with <code>or</code>.</div><div class="alt">rejected: bool + re-inspection by caller</div></div>
+    <div class="card adr"><div class="q">Trace numbers unique per file</div><div class="why">Trace sequences restart in every file, so a global unique index rejected valid files. The constraint is scoped to (file, trace_number), matching how the network actually behaves.</div><div class="alt">rejected: globally unique trace_number</div></div>
+  </div>
+</section>
+
+<!-- ================= OPS + TEST ================= -->
+<section id="ops">
+  <div class="grid g2">
+    <div class="rv">
+      <div class="eyebrow">08 · Running it</div>
+      <h2>One command up</h2>
+      <p class="muted">Everything runs under Docker Compose from one image, with locked dependencies via pip-tools.</p>
+<pre class="code">$ docker compose up
+  <span class="f">postgres</span>   healthy
+  <span class="f">redis</span>      broker (db 0) · results (db 1)
+  <span class="f">migrate</span>    exited 0
+  <span class="f">django</span>     :8001  admin
+  <span class="f">celery</span>     prefork × 12
+  <span class="f">beat</span>       DatabaseScheduler · scan every 60 s
+  <span class="f">flower</span>     :9626  task monitor
+
+$ manage.py seed_accounts           <span class="c"># bank's accounts, seed 42</span>
+$ manage.py generate_nacha --seed 7  <span class="c"># drop a file, watch it flow</span></pre>
+    </div>
+    <div class="rv">
+      <div class="eyebrow">09 · Testing</div>
+      <h2>Fast where it can be</h2>
+      <div class="card" style="margin-top:14px"><h3>Pure unit tests</h3><p>Parametrized tables for every check branch and the check digit, including boundaries like a debit landing exactly on the limit. No database, no worker.</p></div>
+      <div class="card" style="margin-top:12px"><h3>Database tests</h3><p>pytest-django builds a throwaway test database; each test creates the accounts it needs and rolls back. Golden fixtures cover a good file and a file with bad totals.</p></div>
+      <div class="card" style="margin-top:12px"><h3>Layout tests</h3><p>Record layouts are asserted to cover all 94 characters with no gaps or overlaps, so a typo in a field position fails CI, not production.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= ROADMAP ================= -->
+<section id="roadmap">
+  <div class="rv">
+    <div class="eyebrow">10 · Roadmap</div>
+    <h2>Shipped in small, tagged releases</h2>
+  </div>
+  <div class="road rv">
+    <div class="ms done"><div class="v">v0.1</div><h3>Foundations <span class="badge done">done</span></h3><p>Dockerized Django + Celery + Beat + Flower, Postgres and Redis, the admin.</p></div>
+    <div class="ms done"><div class="v">v0.2</div><h3>Files in, parsed <span class="badge done">done</span></h3><p>NACHA parser and writer, seeded test-data generator, atomic-rename scanner, ingest with reconciled totals.</p></div>
+    <div class="ms now"><div class="v">v0.3 · Dec</div><h3>Validation pipeline + web <span class="badge now">in progress</span></h3><p>Shipped so far: pure entry checks, idempotent chunked evaluation with row locks, the chain → chord pipeline. Next: upload page with <code>on_commit</code>, request-ID middleware, failure-path generator flags.</p></div>
+    <div class="ms"><div class="v">v0.4 · Dec</div><h3>Money moves <span class="badge next">planned</span></h3><p>Double-entry ledger, <code>F()</code>-based balance updates, a mock Fed gateway with retries and backoff, a kill-the-worker durability test.</p></div>
+    <div class="ms"><div class="v">v0.5 · Dec</div><h3>API + failures <span class="badge next">planned</span></h3><p>DRF API with token auth, dead-letter queue with replay, timeouts, Sentry.</p></div>
+    <div class="ms"><div class="v">v0.6–v1.0 · Feb</div><h3>Scale, operations, deploy <span class="badge next">planned</span></h3><p>Async checks and worker pools, settlement windows and returns processing, then Kubernetes on kind/OpenShift with a live end-to-end demo.</p></div>
+  </div>
+</section>
+
+</main>
+
+<footer>
+  <span>© 2026 Richard Fox · ACH Batch Processor design document</span>
+  <span><a href="index.html">← Back to portfolio</a></span>
+</footer>
+
+<script>
+(function(){
+  var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  /* reveal on scroll */
+  var els = document.querySelectorAll('.rv');
+  if ('IntersectionObserver' in window && !reduce){
+    var io = new IntersectionObserver(function(ents){
+      ents.forEach(function(e){ if(e.isIntersecting){ e.target.classList.add('in'); io.unobserve(e.target);} });
+    },{threshold:.12});
+    els.forEach(function(el){ io.observe(el); });
+  } else { els.forEach(function(el){ el.classList.add('in'); }); }
+
+  /* scroll progress + active nav */
+  var prog = document.getElementById('progress');
+  var navLinks = Array.prototype.slice.call(document.querySelectorAll('nav .links a'));
+  function onScroll(){
+    var h = document.documentElement;
+    var p = h.scrollTop / ((h.scrollHeight - h.clientHeight) || 1);
+    prog.style.width = (p*100).toFixed(1)+'%';
+    var cur = null;
+    navLinks.forEach(function(a){
+      var s = document.querySelector(a.getAttribute('href'));
+      if (s && s.getBoundingClientRect().top < 140) cur = a;
+    });
+    navLinks.forEach(function(a){ a.classList.toggle('active', a===cur); });
+  }
+  window.addEventListener('scroll', onScroll, {passive:true}); onScroll();
+
+  /* counters */
+  var counted = false;
+  function count(){
+    if (counted) return; counted = true;
+    document.querySelectorAll('[data-count]').forEach(function(el){
+      var end = +el.getAttribute('data-count'), t0 = null;
+      if (reduce){ el.textContent = end; return; }
+      function step(ts){ if(!t0) t0 = ts; var k = Math.min((ts-t0)/1200,1);
+        el.textContent = Math.round(end*(1-Math.pow(1-k,3))); if(k<1) requestAnimationFrame(step); }
+      requestAnimationFrame(step);
+    });
+  }
+  var statsEl = document.querySelector('.stats');
+  if ('IntersectionObserver' in window){
+    new IntersectionObserver(function(e,o){ if(e[0].isIntersecting){ count(); o.disconnect(); } },{threshold:.4}).observe(statsEl);
+  } else count();
+
+  /* terminal typing */
+  var lines = [
+    ['d','$ docker compose logs -f celery'],
+    ['', 'scan_incoming  succeeded: 1 claimed'],
+    ['t','process_file   Loaded gen_…103510.ach as file 18'],
+    ['', 'check_file     41 PENDING → 5 chunks → chord'],
+    ['w','check_entries  [ForkPoolWorker-7] valid=1  invalid=0'],
+    ['w','check_entries  [ForkPoolWorker-8] valid=8  invalid=2'],
+    ['w','check_entries  [ForkPoolWorker-2] valid=10 invalid=0'],
+    ['w','check_entries  [ForkPoolWorker-1] valid=8  invalid=2'],
+    ['w','check_entries  [ForkPoolWorker-9] valid=10 invalid=0'],
+    ['ok','finalize_file  file 18 CHECKED  valid=37 invalid=4'],
+    ['d','  invalid → R02 ×4 (closed accounts)']
+  ];
+  var term = document.getElementById('termtext');
+  function esc(s){ return s.replace(/&/g,'&amp;').replace(/</g,'&lt;'); }
+  if (reduce){
+    term.innerHTML = lines.map(function(l){ return '<span class="'+l[0]+'">'+esc(l[1])+'</span>'; }).join('\n');
+  } else {
+    var li = 0, ci = 0, html = '';
+    (function type(){
+      if (li >= lines.length){ term.innerHTML = html + '<span class="cursor"></span>'; setTimeout(function(){ li=0;ci=0;html=''; type(); }, 5000); return; }
+      var L = lines[li];
+      ci++;
+      term.innerHTML = html + '<span class="'+L[0]+'">'+esc(L[1].slice(0,ci))+'</span><span class="cursor"></span>';
+      if (ci >= L[1].length){ html += '<span class="'+L[0]+'">'+esc(L[1])+'</span>\n'; li++; ci=0; setTimeout(type, 260); }
+      else setTimeout(type, 14);
+    })();
+  }
+
+  /* entry detail record fields (positions 1-based inclusive) */
+  var fields = [
+    ['1','1','6','Record type'],
+    ['2-3','22','22','Txn code'],
+    ['4-11','04200001','RDFI','RDFI routing'],
+    ['12','3','3','Check digit'],
+    ['13-29','123456789        ','acct','Account no.'],
+    ['30-39','0000125000','amt','Amount ¢'],
+    ['40-54','EMP0042        ','id','Individual ID'],
+    ['55-76','DOE JANE              ','name','Name'],
+    ['77-78','  ','dd','Discretionary'],
+    ['79','0','0','Addenda ind.'],
+    ['80-94','042000010000001','trace','Trace number']
+  ];
+  var row = document.getElementById('entryRow');
+  fields.forEach(function(f){
+    var d = document.createElement('div'); d.className = 'fld' + (f[3]==='RDFI routing'||f[3]==='Check digit' ? ' hl':'');
+    d.title = f[3] + ' · positions ' + f[0];
+    var v = document.createElement('div'); v.className='v'; v.textContent = f[1];
+    var p = document.createElement('div'); p.className='p'; p.textContent = f[0];
+    var n = document.createElement('div'); n.className='n'; n.textContent = f[3];
+    d.appendChild(p); d.appendChild(v); d.appendChild(n); row.appendChild(d);
+  });
+
+  /* check digit calculator */
+  var W = [3,7,1,3,7,1,3,7];
+  var cdin = document.getElementById('cdin'), grid = document.getElementById('cdgrid'),
+      out = document.getElementById('cdout'), err = document.getElementById('cderr');
+  function cell(txt, cls){ var d=document.createElement('div'); if(cls) d.className=cls; d.textContent=txt; return d; }
+  function calc(){
+    var v = cdin.value.replace(/\s/g,'');
+    grid.innerHTML = '';
+    if (!/^\d{8}$/.test(v)){
+      err.textContent = v.length && !/^\d*$/.test(v) ? 'Digits only.' : 'Enter exactly 8 digits.';
+      out.textContent = ''; return;
+    }
+    err.textContent = '';
+    var sum = 0, prods = [];
+    for (var i=0;i<8;i++){ var p = +v[i]*W[i]; prods.push(p); sum += p; }
+    var cd = (10 - sum % 10) % 10;
+    grid.appendChild(cell('digit','h')); for(i=0;i<8;i++) grid.appendChild(cell(v[i]));
+    grid.appendChild(cell('weight','h')); for(i=0;i<8;i++) grid.appendChild(cell('×'+W[i]));
+    grid.appendChild(cell('product','h')); for(i=0;i<8;i++) grid.appendChild(cell(String(prods[i])));
+    out.innerHTML = '';
+    out.appendChild(document.createTextNode('sum = '+sum+'  →  (10 − '+sum+' mod 10) mod 10 = '));
+    var b = document.createElement('b'); b.textContent = cd; out.appendChild(b);
+    out.appendChild(document.createTextNode('   routing = '+v+cd));
+  }
+  cdin.addEventListener('input', calc); calc();
+
+  /* lost update demo */
+  var mode = 'none', running = false;
+  var bNo = document.getElementById('mNo'), bLock = document.getElementById('mLock');
+  bNo.addEventListener('click', function(){ if(running) return; mode='none'; bNo.classList.add('on'); bLock.classList.remove('on'); reset(); });
+  bLock.addEventListener('click', function(){ if(running) return; mode='lock'; bLock.classList.add('on'); bNo.classList.remove('on'); reset(); });
+  var A = document.getElementById('laneA'), B = document.getElementById('laneB'),
+      dbv = document.getElementById('dbval'), dbl = document.getElementById('dblock'), dbn = document.getElementById('dbnote');
+  function fmt(n){ return n.toLocaleString('en-US'); }
+  function reset(){ A.innerHTML=''; B.innerHTML=''; dbv.textContent='40,000'; dbv.style.color=''; dbl.textContent=''; dbn.textContent=''; }
+  function add(lane, txt, cls){ var s=document.createElement('div'); s.className='step '+(cls||''); s.textContent=txt; lane.appendChild(s); requestAnimationFrame(function(){ s.classList.add('show'); }); }
+  function setDb(v, color){ dbv.textContent = fmt(v); dbv.style.color = color||''; }
+  function run(script){
+    running = true; reset(); var i = 0;
+    (function next(){
+      if (i >= script.length){ running = false; return; }
+      script[i++](); setTimeout(next, reduce ? 0 : 900);
+    })();
+  }
+  document.getElementById('runRace').addEventListener('click', function(){
+    if (running) return;
+    if (mode === 'none'){
+      run([
+        function(){ add(A,'read used = 40,000'); },
+        function(){ add(B,'read used = 40,000'); },
+        function(){ add(A,'40,000 + 8,000 ≤ 50,000 ✓'); },
+        function(){ add(B,'40,000 + 9,000 ≤ 50,000 ✓'); },
+        function(){ add(A,'write 48,000'); setDb(48000); },
+        function(){ add(B,'write 49,000', 'bad'); setDb(49000,'#fb7185'); },
+        function(){ dbn.textContent = 'Real debits: 57,000. A\'s 8,000 was lost, and the limit was blown.'; }
+      ]);
+    } else {
+      run([
+        function(){ add(A,'SELECT … FOR UPDATE → 40,000'); dbl.textContent='🔒 locked by A'; },
+        function(){ add(B,'SELECT … FOR UPDATE → waiting…','wait'); },
+        function(){ add(A,'40,000 + 8,000 ≤ 50,000 ✓'); },
+        function(){ add(A,'write 48,000 · COMMIT','good'); setDb(48000); dbl.textContent='🔒 handed to B'; },
+        function(){ add(B,'lock acquired → reads 48,000'); },
+        function(){ add(B,'48,000 + 9,000 > 50,000 → R01','good'); dbl.textContent='unlocked'; setDb(48000,'#4ade80'); },
+        function(){ dbn.textContent = 'Correct: one debit posts, the other is returned R01.'; }
+      ]);
+    }
+  });
+})();
+</script>
+</body>
+</html>

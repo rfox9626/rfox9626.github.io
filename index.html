@@ -117,6 +117,19 @@
     <section id="portfolio">
         <h2>Portfolio</h2>
         <p class="section-intro">Independent projects I designed and built end-to-end to demonstrate hands-on systems and backend engineering — source code and design docs linked for each.</p>
+	        <article class="project-card">
+            <h3><a href="ach_batch_processor.html" class="project-link">ACH Batch Processor: Receiving-Bank NACHA Pipeline</a></h3>
+            <div class="tags"><span class="tag">Python / Django</span><span class="tag">Celery</span><span class="tag">PostgreSQL</span><span class="tag">Redis</span><span class="tag">Docker</span></div>
+            <p>A receiving-bank (RDFI) pipeline that claims NACHA payment files as they land, parses and reconciles their fixed-width records and control totals, then validates every entry in parallel against account state&mdash;returning closed, frozen, unknown or over-limit entries with the correct NACHA return codes. Orchestrated as a Celery chain that fans out into a chord of chunked validation tasks, with a single callback reconciling each file.</p>
+            <details class="deep-dive">
+                <summary>Deep dive: exactly-once accounting under parallel workers</summary>
+                <p>Two chunks of the same file can hold debits for the same account, and each must check and update that account's daily usage. A naive read-modify-write lets one worker silently overwrite the other's increment, so an account can exceed its limit. Each chunk therefore locks its usage rows with <code>SELECT &hellip; FOR UPDATE</code>, always in primary-key order to rule out deadlocks, and commits entry statuses and usage increments in a single transaction. Evaluation only touches entries still marked PENDING, which makes every task idempotent: a retried or duplicated task finds nothing left to do, so a debit is never counted twice. Files are claimed with an atomic filesystem rename, with a unique SHA-256 constraint as a backstop, so no file is ever processed twice.</p>
+            </details>
+            <p class="links">
+                <a href="https://github.com/rfox9626/ach-processor" target="_blank">&rarr; View Source Code on GitHub</a> |
+                <a href="ach_batch_processor.html">&rarr; View Interactive Design Document</a>
+            </p>
+        </article>
         <article class="project-card">
             <h3><a href="https://github.com/rfox9626/distributed-event-pipeline" target="_blank" class="project-link">High-Throughput Distributed Event Pipeline</a></h3>
             <div class="tags"><span class="tag">Redpanda / Kafka</span><span class="tag">PostgreSQL</span><span class="tag">Redis</span><span class="tag">Docker</span></div>
